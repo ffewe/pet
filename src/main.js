@@ -40,12 +40,13 @@ async function readConfig() {
   try {
     const raw = await fs.readFile(CONFIG_PATH, "utf8");
     const parsed = JSON.parse(raw);
+    const normalizedProviderMode = normalizeProviderMode(parsed.providerMode);
     return {
       openAIApiKey: parsed.openAIApiKey || "",
       model: parsed.model || MODEL_NAME,
       baseUrl: parsed.baseUrl || BASE_URL,
       endpointMode: parsed.endpointMode || ENDPOINT_MODE,
-      providerMode: parsed.providerMode || PROVIDER_MODE
+      providerMode: normalizedProviderMode
     };
   } catch (error) {
     if (error.code === "ENOENT") {
@@ -67,7 +68,7 @@ async function saveConfig(nextConfig) {
     model: nextConfig.model || MODEL_NAME,
     baseUrl: nextConfig.baseUrl || BASE_URL,
     endpointMode: nextConfig.endpointMode || ENDPOINT_MODE,
-    providerMode: nextConfig.providerMode || PROVIDER_MODE
+    providerMode: normalizeProviderMode(nextConfig.providerMode)
   };
 
   await fs.writeFile(CONFIG_PATH, JSON.stringify(config, null, 2), "utf8");
@@ -156,8 +157,101 @@ function buildPrompt() {
   ].join(" ");
 }
 
+function normalizeProviderMode(providerMode) {
+  if (
+    providerMode === "remote-openai-images" ||
+    providerMode === "remote-chat-compat" ||
+    providerMode === "local"
+  ) {
+    return providerMode;
+  }
+
+  if (providerMode === "remote") {
+    return ENDPOINT_MODE === "chat-completions"
+      ? "remote-chat-compat"
+      : "remote-openai-images";
+  }
+
+  return PROVIDER_MODE;
+}
+
 function normalizeEndpointMode(endpointMode) {
-  return endpointMode === "generations" ? "generations" : ENDPOINT_MODE;
+  if (endpointMode === "generations") {
+    return "generations";
+  }
+
+  return ENDPOINT_MODE;
+}
+
+function tryExtractBase64Image(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  if (typeof payload.b64_json === "string") {
+    return payload.b64_json;
+  }
+
+  if (typeof payload.base64 === "string") {
+    return payload.base64;
+  }
+
+  if (Array.isArray(payload.data)) {
+    for (const item of payload.data) {
+      const nested = tryExtractBase64Image(item);
+      if (nested) {
+        return nested;
+      }
+    }
+  }
+
+  if (Array.isArray(payload.output)) {
+    for (const item of payload.output) {
+      const nested = tryExtractBase64Image(item);
+      if (nested) {
+        return nested;
+      }
+    }
+  }
+
+  if (Array.isArray(payload.choices)) {
+    for (const choice of payload.choices) {
+      const nested = tryExtractBase64Image(choice);
+      if (nested) {
+        return nested;
+      }
+    }
+  }
+
+  if (payload.message) {
+    const nested = tryExtractBase64Image(payload.message);
+    if (nested) {
+      return nested;
+    }
+  }
+
+  if (Array.isArray(payload.content)) {
+    for (const part of payload.content) {
+      if (part && typeof part === "object") {
+        if (typeof part.b64_json === "string") {
+          return part.b64_json;
+        }
+
+        if (typeof part.image_base64 === "string") {
+          return part.image_base64;
+        }
+
+        if (part.image_url && typeof part.image_url.url === "string") {
+          const match = /^data:.+;base64,(.+)$/.exec(part.image_url.url);
+          if (match) {
+            return match[1];
+          }
+        }
+      }
+    }
+  }
+
+  return null;
 }
 
 async function callImageProvider(sourceImagePath, config) {
@@ -170,12 +264,43 @@ async function callImageProvider(sourceImagePath, config) {
   }
 
   const normalizedBaseUrl = config.baseUrl.replace(/\/+$/, "");
+  const providerMode = normalizeProviderMode(config.providerMode);
   const endpointMode = normalizeEndpointMode(config.endpointMode);
-  const requestPath =
-    endpointMode === "generations" ? "/images/generations" : "/images/edits";
   let response;
 
-  if (endpointMode === "generations") {
+  if (providerMode === "remote-chat-compat") {
+    const imageDataUrl = await toDataUrl(sourceImagePath);
+    const requestBody = {
+      model: config.model || MODEL_NAME,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `${buildPrompt()} Return the final result as image data if this endpoint supports image generation.`
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: imageDataUrl
+              }
+            }
+          ]
+        }
+      ]
+    };
+
+    response = await fetch(`${normalizedBaseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.openAIApiKey}`,
+        "Content-Type": "application/json",
+        "User-Agent": "codex_cli_rs/0.77.0 (Windows 10.0.26100; x86_64) WindowsTerminal"
+      },
+      body: JSON.stringify(requestBody)
+    });
+  } else if (endpointMode === "generations") {
     const imageDataUrl = await toDataUrl(sourceImagePath);
     const requestBody = {
       model: config.model || MODEL_NAME,
@@ -186,7 +311,7 @@ async function callImageProvider(sourceImagePath, config) {
       image: imageDataUrl
     };
 
-    response = await fetch(`${normalizedBaseUrl}${requestPath}`, {
+    response = await fetch(`${normalizedBaseUrl}/images/generations`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${config.openAIApiKey}`,
@@ -206,7 +331,7 @@ async function callImageProvider(sourceImagePath, config) {
     formData.append("size", "1024x1024");
     formData.append("image[]", blob, fileName);
 
-    response = await fetch(`${normalizedBaseUrl}${requestPath}`, {
+    response = await fetch(`${normalizedBaseUrl}/images/edits`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${config.openAIApiKey}`
@@ -221,11 +346,12 @@ async function callImageProvider(sourceImagePath, config) {
   }
 
   const payload = await response.json();
-  const image = payload.data && payload.data[0];
-  const base64Data = image && (image.b64_json || image.base64);
+  const base64Data = tryExtractBase64Image(payload);
 
   if (!base64Data) {
-    throw new Error("The image provider returned no image data.");
+    throw new Error(
+      `The image provider returned no image data. Response preview: ${JSON.stringify(payload).slice(0, 500)}`
+    );
   }
 
   return writeGeneratedImage(base64Data);

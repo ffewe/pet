@@ -32,7 +32,8 @@
             <span>Provider Mode</span>
             <select id="providerModeInput">
               <option value="local">Local Pixel</option>
-              <option value="remote">Remote API</option>
+              <option value="remote-openai-images">Remote OpenAI Images</option>
+              <option value="remote-chat-compat">Remote Chat Compat</option>
             </select>
           </label>
           <label class="field">
@@ -70,7 +71,10 @@
             </select>
           </label>
           <p class="hint hint-block">
-            `generations` is mainly for compatibility testing. It may not preserve the uploaded image like `edits` does.
+            `images/generations` is mainly for compatibility testing. It may not preserve the uploaded image like `images/edits` does.
+          </p>
+          <p class="hint hint-block">
+            `Remote Chat Compat` is a best-effort mode for providers that expose image-capable models through `chat/completions` instead of OpenAI Images API.
           </p>
           <p class="hint hint-block">
             `Local Pixel` does not require API billing and generates a deterministic pixel-art style preview on your device.

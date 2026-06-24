@@ -85,11 +85,12 @@ function computeHasConfig(config) {
 }
 
 function syncProviderUi() {
-  const remoteOnly = state.providerMode === "remote";
+  const remoteOnly = state.providerMode !== "local";
+  const imagesOnly = state.providerMode === "remote-openai-images";
   elements.apiKeyInput.disabled = !remoteOnly;
   elements.baseUrlInput.disabled = !remoteOnly;
   elements.modelInput.disabled = !remoteOnly;
-  elements.endpointModeInput.disabled = !remoteOnly;
+  elements.endpointModeInput.disabled = !imagesOnly;
 }
 
 async function loadConfig() {
@@ -146,7 +147,7 @@ async function handleSaveConfig() {
   showSuccess(
     state.hasConfig
       ? "Image provider settings saved locally."
-      : "Configuration incomplete. Add key, base URL, and model for remote mode."
+      : "Configuration incomplete. Add key, base URL, and model for remote modes."
   );
 }
 
