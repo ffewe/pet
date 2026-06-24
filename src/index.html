@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <title>Desktop Pet Pixel Preview</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Desktop Pet Phase 1</p>
+          <h1>Turn character images into pixel-style pet previews</h1>
+          <p class="hero-copy">
+            Upload a pet, doll, OC, or character image, generate one cute pixel
+            preview with OpenAI, then export it as a PNG for later use.
+          </p>
+        </div>
+        <section class="settings-card">
+          <div class="card-head">
+            <div>
+              <h2>Image Provider Settings</h2>
+              <p>Configure the key, base URL, and model locally before generating.</p>
+            </div>
+            <span id="configStatus" class="status-pill">Loading...</span>
+          </div>
+          <label class="field">
+            <span>Provider Mode</span>
+            <select id="providerModeInput">
+              <option value="local">Local Pixel</option>
+              <option value="remote">Remote API</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>API Key</span>
+            <input
+              id="apiKeyInput"
+              type="password"
+              placeholder="sk-..."
+              autocomplete="off"
+            />
+          </label>
+          <label class="field">
+            <span>Base URL</span>
+            <input
+              id="baseUrlInput"
+              type="text"
+              placeholder="https://api.openai.com/v1"
+              autocomplete="off"
+            />
+          </label>
+          <label class="field">
+            <span>Model</span>
+            <input
+              id="modelInput"
+              type="text"
+              placeholder="gpt-image-2"
+              autocomplete="off"
+            />
+          </label>
+          <label class="field">
+            <span>Endpoint Mode</span>
+            <select id="endpointModeInput">
+              <option value="edits">images/edits</option>
+              <option value="generations">images/generations</option>
+            </select>
+          </label>
+          <p class="hint hint-block">
+            `generations` is mainly for compatibility testing. It may not preserve the uploaded image like `edits` does.
+          </p>
+          <p class="hint hint-block">
+            `Local Pixel` does not require API billing and generates a deterministic pixel-art style preview on your device.
+          </p>
+          <div class="settings-actions">
+            <button id="saveConfigButton" class="secondary-button">
+              Save Settings
+            </button>
+            <span class="hint">Stored only on this device.</span>
+          </div>
+        </section>
+      </header>
+
+      <main class="content-grid">
+        <section class="panel upload-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-label">Upload</p>
+              <h2>Choose a source image</h2>
+            </div>
+          </div>
+          <div class="upload-box">
+            <button id="selectImageButton" class="primary-button">
+              Select Image
+            </button>
+            <p class="support-copy">
+              Supported: pets, dolls, OCs, portrait-style characters, and other
+              single-subject images in PNG, JPG, or WebP.
+            </p>
+            <p id="sourcePathText" class="path-text">No image selected yet.</p>
+          </div>
+        </section>
+
+        <section class="panel preview-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-label">Preview</p>
+              <h2>Compare before and after</h2>
+            </div>
+            <span id="requestState" class="status-pill idle">Idle</span>
+          </div>
+          <div class="preview-grid">
+            <article class="image-card">
+              <div class="image-card-head">
+                <h3>Original</h3>
+              </div>
+              <div class="image-frame">
+                <img id="sourcePreview" alt="Selected source preview" hidden />
+                <p id="sourcePlaceholder" class="placeholder-text">
+                  Your uploaded image will appear here.
+                </p>
+              </div>
+            </article>
+            <article class="image-card">
+              <div class="image-card-head">
+                <h3>Pixel Preview</h3>
+              </div>
+              <div class="image-frame">
+                <img id="generatedPreview" alt="Generated pixel preview" hidden />
+                <p id="generatedPlaceholder" class="placeholder-text">
+                  Generate once to see the local or remote pixel result here.
+                </p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel action-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-label">Actions</p>
+              <h2>Generate and export</h2>
+            </div>
+          </div>
+          <div class="actions-row">
+            <button id="generateButton" class="primary-button" disabled>
+              Generate Pixel Preview
+            </button>
+            <button id="regenerateButton" class="secondary-button" disabled>
+              Regenerate
+            </button>
+            <button id="exportButton" class="secondary-button" disabled>
+              Export PNG
+            </button>
+          </div>
+          <p id="errorText" class="error-text" hidden></p>
+          <p id="successText" class="success-text" hidden></p>
+        </section>
+      </main>
+    </div>
+
+    <script src="./renderer.js"></script>
+  </body>
+  </html>
