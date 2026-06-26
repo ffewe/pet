@@ -5,6 +5,7 @@ const petBubble = document.getElementById("petBubble");
 const petImage = document.getElementById("petImage");
 const petFallback = document.getElementById("petFallback");
 const petEffect = document.getElementById("petEffect");
+const petEquipmentLayer = document.getElementById("petEquipmentLayer");
 
 const petRuntime = {
   payload: null,
@@ -46,6 +47,36 @@ function setPetImage(filePath, fallbackLetter) {
   petImage.src = window.previewTools.filePathToUrl(filePath);
   petImage.hidden = false;
   petFallback.hidden = true;
+}
+
+function renderEquipment(items = []) {
+  petEquipmentLayer.innerHTML = "";
+  if (!Array.isArray(items) || !items.length) {
+    petStage.dataset.hasEquipment = "false";
+    return;
+  }
+
+  const renderOrder = ["shoes", "bottom", "onepiece", "top", "outerwear", "headwear", "handheld"];
+  const sortedItems = [...items].sort((left, right) => {
+    const leftIndex = renderOrder.indexOf(left.slot);
+    const rightIndex = renderOrder.indexOf(right.slot);
+    return (leftIndex === -1 ? renderOrder.length : leftIndex) - (rightIndex === -1 ? renderOrder.length : rightIndex);
+  });
+
+  for (const item of sortedItems) {
+    if (!item?.pixelImagePath) {
+      continue;
+    }
+
+    const image = document.createElement("img");
+    image.className = `pet-equipment pet-equipment-${item.slot || "misc"}`;
+    image.alt = "";
+    image.src = window.previewTools.filePathToUrl(item.pixelImagePath);
+    image.loading = "eager";
+    petEquipmentLayer.append(image);
+  }
+
+  petStage.dataset.hasEquipment = petEquipmentLayer.children.length ? "true" : "false";
 }
 
 petImage.addEventListener("error", () => {
@@ -168,6 +199,7 @@ function renderPet(payload) {
     petProfile.basePetRenderPath || petProfile.currentCompositeImagePath || petProfile.currentPetImagePath,
     (petProfile.name || "P").slice(0, 1).toUpperCase()
   );
+  renderEquipment(payload.summary.equippedItems || []);
   applyPayloadReaction(payload);
   scheduleBlink(config);
   scheduleIdleBubble(config);

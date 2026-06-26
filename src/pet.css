@@ -171,6 +171,45 @@ button {
   image-rendering: auto;
 }
 
+.pet-equipment-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.pet-equipment {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: auto;
+  filter: drop-shadow(0 2px 6px rgba(44, 28, 17, 0.18));
+}
+
+.pet-equipment-shoes {
+  transform: translateY(6px) scale(1.02);
+}
+
+.pet-equipment-bottom,
+.pet-equipment-onepiece {
+  transform: translateY(2px) scale(1.02);
+}
+
+.pet-equipment-top,
+.pet-equipment-outerwear {
+  transform: translateY(-2px) scale(1.03);
+}
+
+.pet-equipment-headwear {
+  transform: translateY(-10px) scale(0.94);
+}
+
+.pet-equipment-handheld {
+  transform: translateX(8px) translateY(-2px) scale(0.98);
+}
+
 .pet-fallback {
   display: grid;
   place-items: center;
@@ -185,7 +224,7 @@ button {
 .pet-face {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 3;
   pointer-events: none;
 }
 

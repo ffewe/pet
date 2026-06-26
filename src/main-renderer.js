@@ -225,6 +225,7 @@ function createRewardImage(item) {
 }
 
 function renderWarehouse(payload) {
+  const equippedIds = new Set(payload.userData.petProfile.equippedItemIds || []);
   const items = payload.userData.rewardLibrary.filter((item) => {
     if (appState.warehouseFilter === "all") {
       return true;
@@ -277,7 +278,8 @@ function renderWarehouse(payload) {
       const equipButton = document.createElement("button");
       equipButton.className = "primary-button";
       equipButton.type = "button";
-      equipButton.textContent = "Equip";
+      equipButton.textContent = equippedIds.has(item.id) ? "Equipped" : "Equip";
+      equipButton.disabled = equippedIds.has(item.id);
       equipButton.addEventListener("click", () => window.desktopPet.equipItem(item.id));
       actionRow.append(equipButton);
     }
