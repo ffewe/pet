@@ -139,6 +139,10 @@ async function ensureAppDirs() {
   await fs.mkdir(GENERATED_DIR, { recursive: true });
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function tryParseJson(raw) {
   try {
     return JSON.parse(raw);
@@ -273,32 +277,79 @@ function recoverUserDataFromCorruptRaw(raw) {
   return Object.keys(recovered).length > 0 ? recovered : null;
 }
 
+function recoverConfigFromCorruptRaw(raw) {
+  const recovered = {};
+  const stringKeys = ["openAIApiKey", "model", "baseUrl", "endpointMode", "providerMode"];
+
+  for (const key of stringKeys) {
+    const match = new RegExp(`"${key}"\\s*:\\s*"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"`).exec(raw);
+    if (match) {
+      recovered[key] = JSON.parse(`"${match[1]}"`);
+    }
+  }
+
+  const windows = tryParseJson(extractJsonFragment(raw, "windows", "object"));
+  const petPreferences = tryParseJson(extractJsonFragment(raw, "petPreferences", "object"));
+
+  if (windows && typeof windows === "object" && !Array.isArray(windows)) {
+    recovered.windows = windows;
+  }
+
+  if (petPreferences && typeof petPreferences === "object" && !Array.isArray(petPreferences)) {
+    recovered.petPreferences = petPreferences;
+  }
+
+  return Object.keys(recovered).length > 0 ? recovered : null;
+}
+
+async function writeJsonAtomically(filePath, value) {
+  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  await fs.writeFile(tempPath, JSON.stringify(value, null, 2), "utf8");
+  await fs.rename(tempPath, filePath);
+}
+
 async function rewriteRecoveredJson(filePath, raw, recovered) {
   const backupPath = `${filePath}.corrupt-${Date.now()}.bak`;
   await fs.writeFile(backupPath, raw, "utf8");
-  await fs.writeFile(filePath, JSON.stringify(recovered, null, 2), "utf8");
+  await writeJsonAtomically(filePath, recovered);
 }
 
 async function readJsonFile(filePath, fallbackValue) {
   try {
-    const raw = await fs.readFile(filePath, "utf8");
-    const parsed = tryParseJson(raw);
-    if (parsed) {
-      return parsed;
+    let lastRaw = "";
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const raw = await fs.readFile(filePath, "utf8");
+      lastRaw = raw;
+      const parsed = tryParseJson(raw);
+      if (parsed) {
+        return parsed;
+      }
+
+      if (attempt === 0) {
+        await sleep(25);
+      }
     }
 
-    const recoveredTruncatedJson = tryRecoverFromTruncatedJson(raw);
+    const recoveredTruncatedJson = tryRecoverFromTruncatedJson(lastRaw);
     if (recoveredTruncatedJson) {
-      await rewriteRecoveredJson(filePath, raw, recoveredTruncatedJson);
+      await rewriteRecoveredJson(filePath, lastRaw, recoveredTruncatedJson);
       return recoveredTruncatedJson;
     }
 
     if (filePath === USER_DATA_PATH) {
-      const recoveredUserData = recoverUserDataFromCorruptRaw(raw);
+      const recoveredUserData = recoverUserDataFromCorruptRaw(lastRaw);
       if (recoveredUserData) {
         const normalizedRecovery = normalizeUserData(recoveredUserData);
-        await rewriteRecoveredJson(filePath, raw, normalizedRecovery);
+        await rewriteRecoveredJson(filePath, lastRaw, normalizedRecovery);
         return normalizedRecovery;
+      }
+    }
+
+    if (filePath === CONFIG_PATH) {
+      const recoveredConfig = recoverConfigFromCorruptRaw(lastRaw);
+      if (recoveredConfig) {
+        await rewriteRecoveredJson(filePath, lastRaw, recoveredConfig);
+        return recoveredConfig;
       }
     }
 
@@ -359,7 +410,7 @@ async function saveConfig(nextConfig) {
     }
   };
 
-  await fs.writeFile(CONFIG_PATH, JSON.stringify(config, null, 2), "utf8");
+  await writeJsonAtomically(CONFIG_PATH, config);
   return config;
 }
 
@@ -408,7 +459,7 @@ async function readUserData() {
 
 async function saveUserData(nextData) {
   const normalized = normalizeUserData(nextData);
-  await fs.writeFile(USER_DATA_PATH, JSON.stringify(normalized, null, 2), "utf8");
+  await writeJsonAtomically(USER_DATA_PATH, normalized);
   return normalized;
 }
 
