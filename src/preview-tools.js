@@ -431,11 +431,57 @@
     });
   }
 
+  function getWearableSlotTemplate(slot, canvasSize) {
+    const scale = canvasSize / 148;
+    const templates = {
+      headwear: { centerX: 74, centerY: 28, boxWidth: 68, boxHeight: 30 },
+      top: { centerX: 74, centerY: 71, boxWidth: 82, boxHeight: 62 },
+      bottom: { centerX: 74, centerY: 92, boxWidth: 86, boxHeight: 76 },
+      onepiece: { centerX: 74, centerY: 86, boxWidth: 92, boxHeight: 88 },
+      outerwear: { centerX: 74, centerY: 74, boxWidth: 98, boxHeight: 88 },
+      shoes: { centerX: 74, centerY: 121, boxWidth: 60, boxHeight: 34 },
+      handheld: { centerX: 112, centerY: 80, boxWidth: 52, boxHeight: 72 }
+    };
+
+    const template = templates[slot] || templates.top;
+    return {
+      centerX: template.centerX * scale,
+      centerY: template.centerY * scale,
+      boxWidth: template.boxWidth * scale,
+      boxHeight: template.boxHeight * scale
+    };
+  }
+
+  async function createWearableLayerAsset(source, slot, canvasSize = 148) {
+    const transparentAsset = await createTransparentRewardAsset(source);
+    const image = await loadImageSource(transparentAsset.dataUrl);
+    const targetCanvas = document.createElement("canvas");
+    targetCanvas.width = canvasSize;
+    targetCanvas.height = canvasSize;
+    const context = targetCanvas.getContext("2d");
+    const template = getWearableSlotTemplate(slot, canvasSize);
+
+    const scale = Math.min(template.boxWidth / image.width, template.boxHeight / image.height);
+    const drawWidth = image.width * scale;
+    const drawHeight = image.height * scale;
+    const drawX = template.centerX - drawWidth / 2;
+    const drawY = template.centerY - drawHeight / 2;
+
+    context.clearRect(0, 0, canvasSize, canvasSize);
+    context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+
+    return {
+      dataUrl: targetCanvas.toDataURL("image/png"),
+      transparentDataUrl: transparentAsset.dataUrl
+    };
+  }
+
   window.previewTools = {
     filePathToUrl,
     generateLocalPixelPreview,
     generateLocalChibiPreview,
     createTransparentPetAsset,
-    createTransparentRewardAsset
+    createTransparentRewardAsset,
+    createWearableLayerAsset
   };
 })();

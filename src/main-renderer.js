@@ -575,10 +575,22 @@ dom.rewardForm.addEventListener("submit", async (event) => {
   if (!appState.rewardDraft.previewPath) {
     return;
   }
+  const itemType = dom.rewardTypeInput.value;
+  let wearableLayerPath = "";
+  if (itemType !== "food") {
+    const wearableLayerAsset = await window.previewTools.createWearableLayerAsset(
+      appState.rewardDraft.previewPath,
+      itemType
+    );
+    wearableLayerPath = (
+      await window.desktopPet.saveGeneratedDataUrl(wearableLayerAsset.dataUrl)
+    ).filePath;
+  }
   await window.desktopPet.confirmRewardPreview({
     sourcePath: appState.rewardDraft.sourcePath,
     previewPath: appState.rewardDraft.previewPath,
-    itemType: dom.rewardTypeInput.value,
+    wearableLayerPath,
+    itemType,
     itemName: dom.rewardNameInput.value.trim()
   });
   closeRewardModal();

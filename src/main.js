@@ -1406,6 +1406,8 @@ ipcMain.handle("reward:confirm-preview", async (_event, payload) => {
       slot: payload.itemType,
       sourceImagePath: payload.sourcePath || "",
       pixelImagePath: payload.previewPath,
+      wearableLayerPath: payload.wearableLayerPath || "",
+      renderMode: payload.wearableLayerPath ? "wearable-layer" : "inventory-item",
       status: "candidate",
       equipped: false,
       outfitSetIds: []

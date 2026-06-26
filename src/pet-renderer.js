@@ -51,15 +51,20 @@ function setPetImage(filePath, fallbackLetter) {
 }
 
 async function resolveEquipmentSource(item) {
-  if (!item?.pixelImagePath) {
+  const assetPath = item?.wearableLayerPath || item?.pixelImagePath;
+  if (!assetPath) {
     return "";
   }
 
+  if (item?.renderMode === "wearable-layer" && item?.wearableLayerPath) {
+    return window.previewTools.filePathToUrl(item.wearableLayerPath);
+  }
+
   try {
-    const transparentAsset = await window.previewTools.createTransparentRewardAsset(item.pixelImagePath);
+    const transparentAsset = await window.previewTools.createTransparentRewardAsset(assetPath);
     return transparentAsset.dataUrl;
   } catch {
-    return window.previewTools.filePathToUrl(item.pixelImagePath);
+    return window.previewTools.filePathToUrl(assetPath);
   }
 }
 
@@ -89,7 +94,10 @@ async function renderEquipment(items = []) {
     }
 
     const image = document.createElement("img");
-    image.className = `pet-equipment pet-equipment-${item.slot || "misc"}`;
+    image.className =
+      item?.renderMode === "wearable-layer"
+        ? `pet-equipment pet-equipment-layered pet-equipment-${item.slot || "misc"}`
+        : `pet-equipment pet-equipment-${item.slot || "misc"}`;
     image.alt = "";
     image.src = source;
     image.loading = "eager";
