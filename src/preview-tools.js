@@ -452,6 +452,16 @@
     };
   }
 
+  function drawContainedImage(context, image, canvasSize) {
+    const scale = Math.min(canvasSize / image.width, canvasSize / image.height);
+    const drawWidth = image.width * scale;
+    const drawHeight = image.height * scale;
+    const drawX = (canvasSize - drawWidth) / 2;
+    const drawY = (canvasSize - drawHeight) / 2;
+    context.clearRect(0, 0, canvasSize, canvasSize);
+    context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+  }
+
   async function createWearableLayerAsset(source, slot, canvasSize = 148) {
     const transparentAsset = await createTransparentRewardAsset(source);
     const image = await loadImageSource(transparentAsset.dataUrl);
@@ -476,12 +486,52 @@
     };
   }
 
+  async function createPetBaseWearableLayerAsset(source, slot, canvasSize = 148) {
+    const transparentAsset = await createTransparentPetAsset(source);
+    const image = await loadImageSource(transparentAsset.dataUrl);
+    const baseCanvas = document.createElement("canvas");
+    baseCanvas.width = canvasSize;
+    baseCanvas.height = canvasSize;
+    const baseContext = baseCanvas.getContext("2d", { willReadFrequently: true });
+    drawContainedImage(baseContext, image, canvasSize);
+
+    const template = getWearableSlotTemplate(slot, canvasSize);
+    const sourceImageData = baseContext.getImageData(0, 0, canvasSize, canvasSize);
+    const targetCanvas = document.createElement("canvas");
+    targetCanvas.width = canvasSize;
+    targetCanvas.height = canvasSize;
+    const targetContext = targetCanvas.getContext("2d", { willReadFrequently: true });
+    const targetImageData = targetContext.createImageData(canvasSize, canvasSize);
+
+    const xStart = Math.max(0, Math.floor(template.centerX - template.boxWidth / 2));
+    const yStart = Math.max(0, Math.floor(template.centerY - template.boxHeight / 2));
+    const xEnd = Math.min(canvasSize, Math.ceil(template.centerX + template.boxWidth / 2));
+    const yEnd = Math.min(canvasSize, Math.ceil(template.centerY + template.boxHeight / 2));
+
+    for (let y = yStart; y < yEnd; y += 1) {
+      for (let x = xStart; x < xEnd; x += 1) {
+        const offset = (y * canvasSize + x) * 4;
+        targetImageData.data[offset] = sourceImageData.data[offset];
+        targetImageData.data[offset + 1] = sourceImageData.data[offset + 1];
+        targetImageData.data[offset + 2] = sourceImageData.data[offset + 2];
+        targetImageData.data[offset + 3] = sourceImageData.data[offset + 3];
+      }
+    }
+
+    targetContext.putImageData(targetImageData, 0, 0);
+    return {
+      dataUrl: targetCanvas.toDataURL("image/png"),
+      transparentDataUrl: transparentAsset.dataUrl
+    };
+  }
+
   window.previewTools = {
     filePathToUrl,
     generateLocalPixelPreview,
     generateLocalChibiPreview,
     createTransparentPetAsset,
     createTransparentRewardAsset,
-    createWearableLayerAsset
+    createWearableLayerAsset,
+    createPetBaseWearableLayerAsset
   };
 })();

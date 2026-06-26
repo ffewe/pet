@@ -153,7 +153,7 @@ function buildPrompt(renderStyle = "pet-chibi") {
 }
 
 function getRenderSize(renderStyle = "pet-chibi") {
-  return renderStyle.startsWith("reward-item") ? "512x512" : "768x768";
+  return "768x768";
 }
 
 function extToMime(extension) {

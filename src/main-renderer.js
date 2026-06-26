@@ -670,7 +670,7 @@ dom.confirmPetButton.addEventListener("click", async () => {
   const initialWearables = [];
 
   for (const slot of baseWearableSlots) {
-    const wearableLayerAsset = await window.previewTools.createWearableLayerAsset(
+    const wearableLayerAsset = await window.previewTools.createPetBaseWearableLayerAsset(
       appState.petDraft.previewPath,
       slot
     );
