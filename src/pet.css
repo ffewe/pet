@@ -203,49 +203,49 @@ button {
   transform: none;
 }
 
-.pet-equipment-shoes {
+.pet-equipment-shoes:not(.pet-equipment-layered) {
   top: 82%;
   width: 42%;
   max-width: 60px;
   max-height: 34px;
 }
 
-.pet-equipment-bottom {
+.pet-equipment-bottom:not(.pet-equipment-layered) {
   top: 62%;
   width: 58%;
   max-width: 86px;
   max-height: 76px;
 }
 
-.pet-equipment-onepiece {
+.pet-equipment-onepiece:not(.pet-equipment-layered) {
   top: 58%;
   width: 62%;
   max-width: 92px;
   max-height: 88px;
 }
 
-.pet-equipment-top {
+.pet-equipment-top:not(.pet-equipment-layered) {
   top: 48%;
   width: 56%;
   max-width: 82px;
   max-height: 62px;
 }
 
-.pet-equipment-outerwear {
+.pet-equipment-outerwear:not(.pet-equipment-layered) {
   top: 50%;
   width: 66%;
   max-width: 98px;
   max-height: 88px;
 }
 
-.pet-equipment-headwear {
+.pet-equipment-headwear:not(.pet-equipment-layered) {
   top: 20%;
   width: 46%;
   max-width: 68px;
   max-height: 30px;
 }
 
-.pet-equipment-handheld {
+.pet-equipment-handheld:not(.pet-equipment-layered) {
   left: 76%;
   top: 54%;
   width: 34%;
