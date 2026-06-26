@@ -318,7 +318,15 @@
     return total ? opaqueCount / total : 0;
   }
 
-  async function createTransparentPetAsset(source) {
+  async function createTransparentAsset(source, options = {}) {
+    const {
+      padding = 16,
+      minRemovedRatio = 0.015,
+      maxCornerOpacity = 0.22,
+      maxFailedCorners = 2,
+      failureMessage = "Generated asset still appears to have a solid white background. Please regenerate."
+    } = options;
+
     const image = source.startsWith("data:")
       ? await loadImageSource(source)
       : await loadImage(source);
@@ -338,7 +346,6 @@
       throw new Error("Transparent asset processing removed the whole image.");
     }
 
-    const padding = 16;
     const cropX = Math.max(0, bounds.minX - padding);
     const cropY = Math.max(0, bounds.minY - padding);
     const cropWidth = Math.min(image.width - cropX, bounds.maxX - bounds.minX + 1 + padding * 2);
@@ -394,10 +401,8 @@
     const averageCornerOpacity =
       cornerOpacities.reduce((sum, ratio) => sum + ratio, 0) / cornerOpacities.length;
     const removedRatio = removedCount / Math.max(1, image.width * image.height);
-    if (failedCorners >= 3 || (removedRatio < 0.015 && averageCornerOpacity > 0.22)) {
-      throw new Error(
-        "Generated pet asset still appears to have a solid white background. Please regenerate."
-      );
+    if (failedCorners > maxFailedCorners || (removedRatio < minRemovedRatio && averageCornerOpacity > maxCornerOpacity)) {
+      throw new Error(failureMessage);
     }
 
     return {
@@ -406,10 +411,31 @@
     };
   }
 
+  async function createTransparentPetAsset(source) {
+    return createTransparentAsset(source, {
+      padding: 16,
+      minRemovedRatio: 0.015,
+      maxCornerOpacity: 0.22,
+      maxFailedCorners: 2,
+      failureMessage: "Generated pet asset still appears to have a solid white background. Please regenerate."
+    });
+  }
+
+  async function createTransparentRewardAsset(source) {
+    return createTransparentAsset(source, {
+      padding: 10,
+      minRemovedRatio: 0.01,
+      maxCornerOpacity: 0.18,
+      maxFailedCorners: 1,
+      failureMessage: "Generated reward asset still appears to have a solid white background. Please regenerate."
+    });
+  }
+
   window.previewTools = {
     filePathToUrl,
     generateLocalPixelPreview,
     generateLocalChibiPreview,
-    createTransparentPetAsset
+    createTransparentPetAsset,
+    createTransparentRewardAsset
   };
 })();

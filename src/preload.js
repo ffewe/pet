@@ -29,6 +29,7 @@ const api = {
   setTodayReward: (targetType, targetId) =>
     ipcRenderer.invoke("reward:set-today", { targetType, targetId }),
   equipItem: (itemId) => ipcRenderer.invoke("reward:equip-item", { itemId }),
+  unequipItem: (itemId) => ipcRenderer.invoke("reward:unequip-item", { itemId }),
   useReward: (itemId) => ipcRenderer.invoke("reward:use-item", { itemId }),
   createOutfitSet: (name, itemIds) => ipcRenderer.invoke("outfit:create", { name, itemIds }),
   updateOutfitSet: (setId, name, itemIds) =>

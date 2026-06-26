@@ -180,34 +180,67 @@ button {
 
 .pet-equipment {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  left: 50%;
+  top: 50%;
+  width: var(--equip-width, 62%);
+  max-width: var(--equip-max-width, 96px);
+  max-height: var(--equip-max-height, 96px);
+  height: auto;
   object-fit: contain;
   image-rendering: auto;
   filter: drop-shadow(0 2px 6px rgba(44, 28, 17, 0.18));
+  transform: translate(-50%, -50%) var(--equip-transform, translateY(0));
 }
 
 .pet-equipment-shoes {
-  transform: translateY(6px) scale(1.02);
+  top: 82%;
+  width: 42%;
+  max-width: 60px;
+  max-height: 34px;
 }
 
-.pet-equipment-bottom,
+.pet-equipment-bottom {
+  top: 62%;
+  width: 58%;
+  max-width: 86px;
+  max-height: 76px;
+}
+
 .pet-equipment-onepiece {
-  transform: translateY(2px) scale(1.02);
+  top: 58%;
+  width: 62%;
+  max-width: 92px;
+  max-height: 88px;
 }
 
-.pet-equipment-top,
+.pet-equipment-top {
+  top: 48%;
+  width: 56%;
+  max-width: 82px;
+  max-height: 62px;
+}
+
 .pet-equipment-outerwear {
-  transform: translateY(-2px) scale(1.03);
+  top: 50%;
+  width: 66%;
+  max-width: 98px;
+  max-height: 88px;
 }
 
 .pet-equipment-headwear {
-  transform: translateY(-10px) scale(0.94);
+  top: 18%;
+  width: 54%;
+  max-width: 82px;
+  max-height: 42px;
 }
 
 .pet-equipment-handheld {
-  transform: translateX(8px) translateY(-2px) scale(0.98);
+  left: 76%;
+  top: 54%;
+  width: 34%;
+  max-width: 52px;
+  max-height: 72px;
+  transform: translate(-50%, -50%);
 }
 
 .pet-fallback {

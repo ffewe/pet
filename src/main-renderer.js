@@ -275,12 +275,14 @@ function renderWarehouse(payload) {
     actionRow.append(rewardButton);
 
     if (item.status === "owned" && item.type === "wearable") {
+      const isEquipped = equippedIds.has(item.id);
       const equipButton = document.createElement("button");
       equipButton.className = "primary-button";
       equipButton.type = "button";
-      equipButton.textContent = equippedIds.has(item.id) ? "Equipped" : "Equip";
-      equipButton.disabled = equippedIds.has(item.id);
-      equipButton.addEventListener("click", () => window.desktopPet.equipItem(item.id));
+      equipButton.textContent = isEquipped ? "Unequip" : "Equip";
+      equipButton.addEventListener("click", () =>
+        isEquipped ? window.desktopPet.unequipItem(item.id) : window.desktopPet.equipItem(item.id)
+      );
       actionRow.append(equipButton);
     }
 
@@ -449,12 +451,15 @@ async function generatePetPreview(sourcePath) {
 
 async function generateRewardPreview(sourcePath) {
   const config = await window.desktopPet.readConfig();
+  let rawSource;
   if (config.providerMode === "local") {
-    const dataUrl = await window.previewTools.generateLocalPixelPreview(sourcePath);
-    return (await window.desktopPet.saveGeneratedDataUrl(dataUrl)).filePath;
+    rawSource = await window.previewTools.generateLocalPixelPreview(sourcePath);
+  } else {
+    rawSource = (await window.desktopPet.generatePixelPreview(sourcePath, "reward-item")).filePath;
   }
 
-  return (await window.desktopPet.generatePixelPreview(sourcePath, "reward-item")).filePath;
+  const transparentAsset = await window.previewTools.createTransparentRewardAsset(rawSource);
+  return (await window.desktopPet.saveGeneratedDataUrl(transparentAsset.dataUrl)).filePath;
 }
 
 async function handleRewardImagePick() {

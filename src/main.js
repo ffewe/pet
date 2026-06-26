@@ -1238,6 +1238,17 @@ function applyPetEvent(state, eventType, meta = {}) {
         lastInteractionEvent: "dressed"
       });
       return;
+    case "undressed":
+      setPetReaction(state, {
+        currentStatus: "updated",
+        interactionState: "idle",
+        motionState: "settle",
+        expressionOverlayState: "smile",
+        bubbleText: meta.name ? `${meta.name} was taken off.` : "Back to a lighter look.",
+        mood: "Calm",
+        lastInteractionEvent: "undressed"
+      });
+      return;
     case "fed":
       setPetReaction(state, {
         currentStatus: "fed",
@@ -1488,6 +1499,22 @@ ipcMain.handle("reward:equip-item", async (_event, payload) => {
       state.rewardLibrary
     );
     applyPetEvent(state, "dressed", { name: item.name });
+    return state;
+  });
+});
+ipcMain.handle("reward:unequip-item", async (_event, payload) => {
+  if (!payload?.itemId) {
+    throw new Error("Item id is required.");
+  }
+  return mutateState((state) => {
+    const item = state.rewardLibrary.find((entry) => entry.id === payload.itemId);
+    if (!item) {
+      throw new Error("Reward item not found.");
+    }
+    state.petProfile.equippedItemIds = state.petProfile.equippedItemIds.filter(
+      (equippedId) => equippedId !== payload.itemId
+    );
+    applyPetEvent(state, "undressed", { name: item.name });
     return state;
   });
 });
