@@ -115,8 +115,7 @@ function buildPrompt(renderStyle = "pet-chibi") {
     "Transform the uploaded character image into cute cartoon pixel art.",
     "Keep the main subject recognizable and preserve distinctive colors and silhouette.",
     "Use a clean, charming, game-ready pixel art look suitable for a desktop pet.",
-    "Keep the composition focused on a single subject and avoid adding extra characters or complex backgrounds.",
-    "Use a transparent background or a very plain clean background, and avoid scenes, frames, decorative props, or visible room details."
+    "Keep the composition focused on a single subject and avoid adding extra characters or complex backgrounds."
   ].join(" ");
 }
 
