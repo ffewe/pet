@@ -103,9 +103,11 @@ function buildEndpointUrl(baseUrl, endpointPath) {
 function buildPrompt(renderStyle = "pet-chibi") {
   if (renderStyle === "reward-item") {
     return [
-      "Transform the uploaded item into a cute desktop pet reward asset.",
-      "Use a clean cartoon style with simple readable shapes and a neat silhouette.",
-      "Keep one subject only and avoid photorealism."
+      "Extract only the main reward object from the uploaded image.",
+      "If the image includes a person wearing or holding the item, remove the person, skin, face, limbs, and body entirely.",
+      "Keep only one isolated clothing item, accessory, handheld prop, or food item, centered and fully visible.",
+      "Redraw it as clean pixel-art game inventory art with crisp edges, limited colors, readable silhouette, and transparent or plain background.",
+      "Do not generate a full character, mannequin, or dressed person."
     ].join(" ");
   }
 
@@ -277,6 +279,99 @@ function recoverUserDataFromCorruptRaw(raw) {
   }
 
   return Object.keys(recovered).length > 0 ? recovered : null;
+}
+
+function isTimeoutLikeImageError(error) {
+  const message = `${error && error.message ? error.message : error}`.toLowerCase();
+  return message.includes("524") || message.includes("timeout") || message.includes("a timeout occurred");
+}
+
+async function requestChatCompatImage(sourceImagePath, config, prompt) {
+  const imageDataUrl = await toDataUrl(sourceImagePath);
+  return fetch(buildEndpointUrl(config.baseUrl, "/chat/completions"), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.openAIApiKey}`,
+      "Content-Type": "application/json",
+      "User-Agent": "codex_cli_rs/0.77.0"
+    },
+    body: JSON.stringify({
+      model: config.model || MODEL_NAME,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `${prompt} Return the final result as image data if the endpoint supports it.`
+            },
+            {
+              type: "image_url",
+              image_url: { url: imageDataUrl }
+            }
+          ]
+        }
+      ]
+    })
+  });
+}
+
+async function requestGenerationsImage(sourceImagePath, config, prompt) {
+  const imageDataUrl = await toDataUrl(sourceImagePath);
+  return fetch(buildEndpointUrl(config.baseUrl, "/images/generations"), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.openAIApiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: config.model || MODEL_NAME,
+      prompt: `${prompt} Use the attached image as the reference subject.`,
+      size: "1024x1024",
+      image: imageDataUrl
+    })
+  });
+}
+
+async function requestEditsImage(sourceImagePath, config, prompt) {
+  const fileBuffer = await fs.readFile(sourceImagePath);
+  const blob = new Blob([fileBuffer], { type: extToMime(path.extname(sourceImagePath)) });
+  const formData = new FormData();
+  formData.append("model", config.model || MODEL_NAME);
+  formData.append("prompt", prompt);
+  formData.append("size", "1024x1024");
+  formData.append("image", blob, path.basename(sourceImagePath));
+  return fetch(buildEndpointUrl(config.baseUrl, "/images/edits"), {
+    method: "POST",
+    headers: { Authorization: `Bearer ${config.openAIApiKey}` },
+    body: formData
+  });
+}
+
+async function parseImageProviderResponse(response, apiKey = "") {
+  if (!response.ok) {
+    throw new Error(`Image request failed (${response.status}): ${await response.text()}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.toLowerCase().startsWith("image/")) {
+    return writeGeneratedImageBuffer(await response.arrayBuffer());
+  }
+
+  const payload = await response.json();
+  const base64Data = tryExtractBase64Image(payload);
+  if (base64Data) {
+    return writeGeneratedImage(base64Data);
+  }
+
+  const imageUrl = tryExtractImageUrl(payload);
+  if (imageUrl) {
+    return writeGeneratedImageUrl(imageUrl, apiKey);
+  }
+
+  throw new Error(
+    `The image provider returned no image data. Response preview: ${JSON.stringify(payload).slice(0, 500)}`
+  );
 }
 
 function recoverConfigFromCorruptRaw(raw) {
@@ -896,89 +991,38 @@ async function callImageProvider(sourceImagePath, config, renderStyle = "pet-chi
   const prompt = buildPrompt(renderStyle);
   const providerMode = normalizeProviderMode(config.providerMode);
   const endpointMode = normalizeEndpointMode(config.endpointMode);
-  let response;
+  try {
+    if (providerMode === "remote-chat-compat") {
+      return await parseImageProviderResponse(
+        await requestChatCompatImage(sourceImagePath, config, prompt),
+        config.openAIApiKey
+      );
+    }
 
-  if (providerMode === "remote-chat-compat") {
-    const imageDataUrl = await toDataUrl(sourceImagePath);
-    response = await fetch(buildEndpointUrl(config.baseUrl, "/chat/completions"), {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${config.openAIApiKey}`,
-        "Content-Type": "application/json",
-        "User-Agent": "codex_cli_rs/0.77.0"
-      },
-      body: JSON.stringify({
-        model: config.model || MODEL_NAME,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `${prompt} Return the final result as image data if the endpoint supports it.`
-              },
-              {
-                type: "image_url",
-                image_url: { url: imageDataUrl }
-              }
-            ]
-          }
-        ]
-      })
-    });
-  } else if (endpointMode === "generations") {
-    const imageDataUrl = await toDataUrl(sourceImagePath);
-    response = await fetch(buildEndpointUrl(config.baseUrl, "/images/generations"), {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${config.openAIApiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: config.model || MODEL_NAME,
-        prompt: `${prompt} Use the attached image as the reference subject.`,
-        size: "1024x1024",
-        image: imageDataUrl
-      })
-    });
-  } else {
-    const fileBuffer = await fs.readFile(sourceImagePath);
-    const blob = new Blob([fileBuffer], { type: extToMime(path.extname(sourceImagePath)) });
-    const formData = new FormData();
-    formData.append("model", config.model || MODEL_NAME);
-    formData.append("prompt", prompt);
-    formData.append("size", "1024x1024");
-    formData.append("image", blob, path.basename(sourceImagePath));
-    response = await fetch(buildEndpointUrl(config.baseUrl, "/images/edits"), {
-      method: "POST",
-      headers: { Authorization: `Bearer ${config.openAIApiKey}` },
-      body: formData
-    });
+    if (endpointMode === "generations") {
+      return await parseImageProviderResponse(
+        await requestGenerationsImage(sourceImagePath, config, prompt),
+        config.openAIApiKey
+      );
+    }
+
+    return await parseImageProviderResponse(
+      await requestEditsImage(sourceImagePath, config, prompt),
+      config.openAIApiKey
+    );
+  } catch (error) {
+    const canFallbackToEdits =
+      providerMode === "remote-chat-compat" && isTimeoutLikeImageError(error);
+
+    if (canFallbackToEdits) {
+      return parseImageProviderResponse(
+        await requestEditsImage(sourceImagePath, config, prompt),
+        config.openAIApiKey
+      );
+    }
+
+    throw error;
   }
-
-  if (!response.ok) {
-    throw new Error(`Image request failed (${response.status}): ${await response.text()}`);
-  }
-
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.toLowerCase().startsWith("image/")) {
-    return writeGeneratedImageBuffer(await response.arrayBuffer());
-  }
-
-  const payload = await response.json();
-  const base64Data = tryExtractBase64Image(payload);
-  if (base64Data) {
-    return writeGeneratedImage(base64Data);
-  }
-
-  const imageUrl = tryExtractImageUrl(payload);
-  if (imageUrl) {
-    return writeGeneratedImageUrl(imageUrl, config.openAIApiKey);
-  }
-
-  throw new Error(
-    `The image provider returned no image data. Response preview: ${JSON.stringify(payload).slice(0, 500)}`
-  );
 }
 
 function getSenderWindow(event) {
