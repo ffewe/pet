@@ -104,9 +104,11 @@ function buildPrompt(renderStyle = "pet-chibi") {
   if (renderStyle.startsWith("reward-item")) {
     const [, slot = ""] = renderStyle.split(":");
     const basePrompt = [
-      "Transform the uploaded image into delicate cute cartoon pixel art.",
-      "Keep the main subject recognizable and preserve the distinctive silhouette, layered details, colors, materials, and decorative feeling from the source image.",
-      "Use a refined hand-crafted pixel art look with visible pixel blocks, soft anime-like shading, and detailed decoration rather than a realistic photo edit, rough chunky sprite, or ordinary illustration.",
+      "Transform the uploaded character image into delicate cute cartoon pixel art.",
+      "Keep the main subject recognizable and preserve the distinctive silhouette, outfit layers, hair color, and facial feeling from the source image.",
+      "Use a refined hand-crafted pixel art look with visible pixel blocks, soft anime-like shading, large bright eyes, and detailed clothing decoration.",
+      "Make the result feel like an adorable fantasy doll character sprite rather than a realistic photo edit, rough chunky sprite, or ordinary illustration.",
+      "Keep the composition focused on a single subject and avoid adding extra characters or complex backgrounds.",
       "This conversion is for clothing extraction: keep only one main wearable item, accessory, handheld prop, or food item as the final subject.",
       "If the uploaded image includes a person, doll, body, face, hair, hands, legs, or a full dressed character, remove them entirely and retain only the selected item itself.",
       "Do not generate a full character, mannequin, or outfit being worn; output only the isolated item with a clean simple background and readable silhouette."
@@ -151,7 +153,7 @@ function buildPrompt(renderStyle = "pet-chibi") {
 }
 
 function getRenderSize(renderStyle = "pet-chibi") {
-  return renderStyle === "reward-item" ? "512x512" : "768x768";
+  return renderStyle.startsWith("reward-item") ? "512x512" : "768x768";
 }
 
 function extToMime(extension) {
