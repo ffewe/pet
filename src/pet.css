@@ -272,17 +272,38 @@ button {
   pointer-events: none;
 }
 
-.pet-stage[data-has-image="true"] .pet-face-fallback {
+.pet-face-overlay {
+  z-index: 4;
   opacity: 0;
+  transition: opacity 160ms ease, transform 160ms ease;
 }
 
-.pet-stage[data-has-image="true"] .pet-avatar-frame {
-  background: transparent;
-  box-shadow: none;
+.pet-stage[data-has-image="true"] .pet-face-overlay {
+  opacity: 0.9;
 }
 
 .pet-stage[data-has-image="true"] .pet-face-fallback {
   display: none;
+}
+
+.pet-brow {
+  position: absolute;
+  top: 48px;
+  width: 20px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(55, 35, 23, 0.92);
+  opacity: 0.14;
+}
+
+.brow-left {
+  left: 46px;
+  transform: rotate(-6deg);
+}
+
+.brow-right {
+  right: 46px;
+  transform: rotate(6deg);
 }
 
 .pet-eye {
