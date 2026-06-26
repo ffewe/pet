@@ -4,7 +4,9 @@ const appState = {
   warehouseFilter: "all",
   rewardDraft: {
     sourcePath: "",
-    previewPath: ""
+    previewPath: "",
+    extractedItems: [],
+    mode: "single"
   },
   petDraft: {
     sourcePath: "",
@@ -41,8 +43,10 @@ const dom = {
   rewardNameInput: document.getElementById("rewardNameInput"),
   rewardTypeInput: document.getElementById("rewardTypeInput"),
   pickRewardImageButton: document.getElementById("pickRewardImageButton"),
+  pickRewardOutfitButton: document.getElementById("pickRewardOutfitButton"),
   rewardSourcePreview: document.getElementById("rewardSourcePreview"),
   rewardGeneratedPreview: document.getElementById("rewardGeneratedPreview"),
+  rewardExtractionResults: document.getElementById("rewardExtractionResults"),
   rewardModalMessage: document.getElementById("rewardModalMessage"),
   closeRewardModalButton: document.getElementById("closeRewardModalButton"),
   confirmRewardButton: document.getElementById("confirmRewardButton"),
@@ -83,6 +87,8 @@ const SLOT_LABELS = {
   handheld: "Handheld",
   food: "Food"
 };
+
+const OUTFIT_EXTRACTION_SLOTS = ["headwear", "top", "outerwear", "onepiece", "bottom", "shoes", "handheld"];
 
 function setMessage(text) {
   dom.settingsMessage.textContent = text || "";
@@ -414,13 +420,15 @@ function openRewardModal() {
 
 function closeRewardModal() {
   dom.rewardModal.classList.add("hidden");
-  appState.rewardDraft = { sourcePath: "", previewPath: "" };
+  appState.rewardDraft = { sourcePath: "", previewPath: "", extractedItems: [], mode: "single" };
   dom.rewardNameInput.value = "";
   dom.rewardTypeInput.value = "top";
   dom.rewardSourcePreview.hidden = true;
   dom.rewardGeneratedPreview.hidden = true;
+  dom.rewardExtractionResults.hidden = true;
   dom.rewardSourcePreview.removeAttribute("src");
   dom.rewardGeneratedPreview.removeAttribute("src");
+  dom.rewardExtractionResults.innerHTML = "";
   dom.confirmRewardButton.disabled = true;
 }
 
@@ -449,17 +457,38 @@ async function generatePetPreview(sourcePath) {
   return (await window.desktopPet.saveGeneratedDataUrl(transparentAsset.dataUrl)).filePath;
 }
 
-async function generateRewardPreview(sourcePath) {
+async function generateRewardPreview(sourcePath, renderStyle = "reward-item") {
   const config = await window.desktopPet.readConfig();
   let rawSource;
   if (config.providerMode === "local") {
     rawSource = await window.previewTools.generateLocalPixelPreview(sourcePath);
   } else {
-    rawSource = (await window.desktopPet.generatePixelPreview(sourcePath, "reward-item")).filePath;
+    rawSource = (await window.desktopPet.generatePixelPreview(sourcePath, renderStyle)).filePath;
   }
 
   const transparentAsset = await window.previewTools.createTransparentRewardAsset(rawSource);
   return (await window.desktopPet.saveGeneratedDataUrl(transparentAsset.dataUrl)).filePath;
+}
+
+function renderRewardExtractionResults() {
+  const { extractedItems } = appState.rewardDraft;
+  dom.rewardExtractionResults.innerHTML = "";
+  dom.rewardExtractionResults.hidden = !extractedItems.length;
+
+  for (const item of extractedItems) {
+    const card = document.createElement("div");
+    card.className = "extraction-card";
+    const image = document.createElement("img");
+    image.className = "reward-image";
+    image.alt = item.itemName;
+    image.src = window.previewTools.filePathToUrl(item.previewPath);
+    const title = document.createElement("strong");
+    title.textContent = item.itemName;
+    const meta = document.createElement("span");
+    meta.textContent = SLOT_LABELS[item.itemType] || item.itemType;
+    card.append(image, title, meta);
+    dom.rewardExtractionResults.append(card);
+  }
 }
 
 async function handleRewardImagePick() {
@@ -475,9 +504,14 @@ async function handleRewardImagePick() {
   }
 
   appState.rewardDraft.sourcePath = selected.filePath;
+  appState.rewardDraft.previewPath = "";
+  appState.rewardDraft.extractedItems = [];
+  appState.rewardDraft.mode = "single";
   dom.rewardSourcePreview.src = window.previewTools.filePathToUrl(selected.filePath);
   dom.rewardSourcePreview.hidden = false;
   dom.rewardGeneratedPreview.hidden = true;
+  dom.rewardExtractionResults.hidden = true;
+  dom.rewardExtractionResults.innerHTML = "";
   dom.confirmRewardButton.disabled = true;
   dom.rewardModalMessage.textContent = "Generating preview...";
 
@@ -491,6 +525,72 @@ async function handleRewardImagePick() {
   } catch (error) {
     dom.rewardModalMessage.textContent = error.message || "Reward preview generation failed.";
   }
+}
+
+async function handleRewardOutfitPick() {
+  const config = await window.desktopPet.readConfig();
+  if (config.providerMode === "local") {
+    dom.rewardModalMessage.textContent = "Outfit splitting requires an AI image provider.";
+    return;
+  }
+
+  const selected = await window.desktopPet.selectSourceImage("Choose an outfit reference image");
+  if (!selected) {
+    return;
+  }
+
+  appState.rewardDraft = {
+    sourcePath: selected.filePath,
+    previewPath: "",
+    extractedItems: [],
+    mode: "outfit"
+  };
+  dom.rewardSourcePreview.src = window.previewTools.filePathToUrl(selected.filePath);
+  dom.rewardSourcePreview.hidden = false;
+  dom.rewardGeneratedPreview.hidden = true;
+  dom.rewardGeneratedPreview.removeAttribute("src");
+  dom.rewardExtractionResults.hidden = true;
+  dom.rewardExtractionResults.innerHTML = "";
+  dom.confirmRewardButton.disabled = true;
+
+  const baseName = dom.rewardNameInput.value.trim();
+  let foundCount = 0;
+
+  for (let index = 0; index < OUTFIT_EXTRACTION_SLOTS.length; index += 1) {
+    const slot = OUTFIT_EXTRACTION_SLOTS[index];
+    dom.rewardModalMessage.textContent = `Extracting ${SLOT_LABELS[slot] || slot} (${index + 1}/${OUTFIT_EXTRACTION_SLOTS.length})...`;
+
+    try {
+      const previewPath = await generateRewardPreview(selected.filePath, `reward-item:${slot}`);
+      const wearableLayerAsset = await window.previewTools.createWearableLayerAsset(previewPath, slot);
+      const wearableLayerPath = (
+        await window.desktopPet.saveGeneratedDataUrl(wearableLayerAsset.dataUrl)
+      ).filePath;
+      const itemName = baseName
+        ? `${baseName} ${SLOT_LABELS[slot] || slot}`
+        : `Detected ${SLOT_LABELS[slot] || slot}`;
+
+      appState.rewardDraft.extractedItems.push({
+        sourcePath: selected.filePath,
+        previewPath,
+        wearableLayerPath,
+        itemType: slot,
+        itemName
+      });
+      foundCount += 1;
+      renderRewardExtractionResults();
+    } catch {
+      continue;
+    }
+  }
+
+  if (!foundCount) {
+    dom.rewardModalMessage.textContent = "No wearable items could be extracted from this image.";
+    return;
+  }
+
+  dom.rewardModalMessage.textContent = `Split extraction ready. ${foundCount} item(s) detected. Confirm to add them to the wardrobe.`;
+  dom.confirmRewardButton.disabled = false;
 }
 
 async function handlePetImagePick() {
@@ -558,6 +658,7 @@ dom.warehouseFilters.forEach((button) => {
 dom.openRewardModalButton.addEventListener("click", openRewardModal);
 dom.closeRewardModalButton.addEventListener("click", closeRewardModal);
 dom.pickRewardImageButton.addEventListener("click", handleRewardImagePick);
+dom.pickRewardOutfitButton.addEventListener("click", handleRewardOutfitPick);
 dom.openPetModalButton.addEventListener("click", openPetModal);
 dom.pickPetImageButton.addEventListener("click", handlePetImagePick);
 dom.closePetModalButton.addEventListener("click", closePetModal);
@@ -597,6 +698,15 @@ dom.confirmPetButton.addEventListener("click", async () => {
 
 dom.rewardForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (appState.rewardDraft.extractedItems.length) {
+    for (const item of appState.rewardDraft.extractedItems) {
+      await window.desktopPet.confirmRewardPreview(item);
+    }
+    closeRewardModal();
+    setTab("warehouse");
+    return;
+  }
+
   if (!appState.rewardDraft.previewPath) {
     return;
   }

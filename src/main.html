@@ -229,7 +229,7 @@
         <form id="rewardForm" class="reward-form">
           <div class="modal-form-row">
             <label class="field">
-              <span>Name</span>
+              <span>Name / Prefix</span>
               <input id="rewardNameInput" type="text" maxlength="40" placeholder="Example: Strawberry hoodie" />
             </label>
             <label class="field">
@@ -248,6 +248,7 @@
           </div>
           <div class="modal-actions start">
             <button id="pickRewardImageButton" class="secondary-button" type="button">Choose source and generate</button>
+            <button id="pickRewardOutfitButton" class="secondary-button" type="button">Choose outfit image and split</button>
           </div>
           <div class="preview-grid">
             <div class="preview-card">
@@ -259,6 +260,7 @@
               <img id="rewardGeneratedPreview" alt="Reward preview" hidden />
             </div>
           </div>
+          <div id="rewardExtractionResults" class="extraction-grid" hidden></div>
           <p id="rewardModalMessage" class="helper-text"></p>
           <div class="modal-actions">
             <button id="closeRewardModalButton" class="ghost-button" type="button">Cancel</button>

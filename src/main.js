@@ -101,14 +101,43 @@ function buildEndpointUrl(baseUrl, endpointPath) {
 }
 
 function buildPrompt(renderStyle = "pet-chibi") {
-  if (renderStyle === "reward-item") {
-    return [
+  if (renderStyle.startsWith("reward-item")) {
+    const [, slot = ""] = renderStyle.split(":");
+    const basePrompt = [
       "Transform the uploaded image into delicate cute cartoon pixel art.",
       "Keep the main subject recognizable and preserve the distinctive silhouette, layered details, colors, materials, and decorative feeling from the source image.",
       "Use a refined hand-crafted pixel art look with visible pixel blocks, soft anime-like shading, and detailed decoration rather than a realistic photo edit, rough chunky sprite, or ordinary illustration.",
       "This conversion is for clothing extraction: keep only one main wearable item, accessory, handheld prop, or food item as the final subject.",
       "If the uploaded image includes a person, doll, body, face, hair, hands, legs, or a full dressed character, remove them entirely and retain only the selected item itself.",
       "Do not generate a full character, mannequin, or outfit being worn; output only the isolated item with a clean simple background and readable silhouette."
+    ];
+
+    if (!slot) {
+      return basePrompt.join(" ");
+    }
+
+    const slotInstructions = {
+      headwear:
+        "Target only the worn head accessory or headwear. Do not include hair, face, or the full body.",
+      top:
+        "Target only the upper-body clothing layer being worn, such as blouse, shirt, corset, or knit top. Do not include headwear, legs, or shoes.",
+      outerwear:
+        "Target only the outerwear layer being worn, such as coat, cardigan, cape, shawl, or jacket. Keep it separate from the inner top or dress.",
+      onepiece:
+        "Target only the single-piece dress or romper layer being worn. Do not split it into separate top and bottom pieces.",
+      bottom:
+        "Target only the lower-body clothing layer being worn, such as skirt, shorts, or pants. Do not include shoes or the upper body.",
+      shoes:
+        "Target only the footwear being worn. Keep any socks, legs, and lower-body clothing out of the final image.",
+      handheld:
+        "Target only the handheld prop or carried item being used by the character. Do not include hands, arms, or the body."
+    };
+
+    return [
+      ...basePrompt,
+      slotInstructions[slot] || `Target only the ${slot} wearable item.`,
+      "Treat the source as clothing being worn on a character and reconstruct only that single target slot as the final item.",
+      "If the target slot is not visibly present in the source image, return a fully transparent empty image with no object."
     ].join(" ");
   }
 
