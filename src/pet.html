@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Desktop Pet</title>
+    <link rel="stylesheet" href="./pet.css" />
+  </head>
+  <body>
+    <main
+      id="petStage"
+      class="pet-stage"
+      data-state="idle"
+      data-motion="idle"
+      data-expression="smile"
+      data-has-image="false"
+    >
+      <button id="sidebarButton" class="sidebar-button" type="button" aria-label="Open sidebar">
+        Menu
+      </button>
+      <div id="petBubble" class="pet-bubble">We have time. Let's make today cute and useful.</div>
+      <div id="petCharacter" class="pet-character" role="button" tabindex="0" aria-label="Pet">
+        <div class="pet-shadow"></div>
+        <div id="petEffect" class="pet-effect"></div>
+        <div class="pet-float">
+          <div class="pet-bob">
+            <div class="pet-avatar-frame">
+              <img id="petImage" alt="Current pet" hidden />
+              <div id="petFallback" class="pet-fallback">M</div>
+              <div class="pet-face pet-face-fallback">
+                <div class="pet-eye eye-left"></div>
+                <div class="pet-eye eye-right"></div>
+                <div class="pet-mouth"></div>
+                <div class="pet-blush blush-left"></div>
+                <div class="pet-blush blush-right"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="./preview-tools.js"></script>
+    <script src="./pet-renderer.js"></script>
+  </body>
+</html>
