@@ -249,6 +249,7 @@ function extractJsonFragment(raw, key, fragmentType) {
   if (startIndex === -1) {
     return null;
   }
+  }
 
   const endIndex = findMatchingBoundary(raw, startIndex, openChar, closeChar);
   if (endIndex === -1) {
@@ -1192,7 +1193,7 @@ function applyPetEvent(state, eventType, meta = {}) {
         currentStatus: "reacting",
         interactionState: "happy",
         motionState: "bounce",
-        expressionOverlayState: "smile",
+        expressionOverlayState: "happy",
         bubbleText: "Hey. I noticed that tap.",
         mood: "Playful",
         lastInteractionEvent: "tap"
