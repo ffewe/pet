@@ -103,11 +103,12 @@ function buildEndpointUrl(baseUrl, endpointPath) {
 function buildPrompt(renderStyle = "pet-chibi") {
   if (renderStyle === "reward-item") {
     return [
-      "Extract only the main reward object from the uploaded image.",
-      "If the image includes a person wearing or holding the item, remove the person, skin, face, limbs, and body entirely.",
-      "Keep only one isolated clothing item, accessory, handheld prop, or food item, centered and fully visible.",
-      "Redraw it as clean pixel-art game inventory art with crisp edges, limited colors, readable silhouette, and transparent or plain background.",
-      "Do not generate a full character, mannequin, or dressed person."
+      "Transform the uploaded image into delicate cute cartoon pixel art.",
+      "Keep the main subject recognizable and preserve the distinctive silhouette, layered details, colors, materials, and decorative feeling from the source image.",
+      "Use a refined hand-crafted pixel art look with visible pixel blocks, soft anime-like shading, and detailed decoration rather than a realistic photo edit, rough chunky sprite, or ordinary illustration.",
+      "This conversion is for clothing extraction: keep only one main wearable item, accessory, handheld prop, or food item as the final subject.",
+      "If the uploaded image includes a person, doll, body, face, hair, hands, legs, or a full dressed character, remove them entirely and retain only the selected item itself.",
+      "Do not generate a full character, mannequin, or outfit being worn; output only the isolated item with a clean simple background and readable silhouette."
     ].join(" ");
   }
 
