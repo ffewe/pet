@@ -112,10 +112,12 @@ function buildPrompt(renderStyle = "pet-chibi") {
   }
 
   return [
-    "Redraw the uploaded character as a cute chibi desktop pet character.",
-    "Use a big head, small body, clean silhouette, expressive face, soft cartoon shading, and toy-like charm.",
-    "Keep the subject recognizable, but make it clearly non-photorealistic and not a photo edit.",
-    "Use a transparent or very clean background and keep only one character."
+    "Redraw the uploaded subject as cute cartoon pixel art for a desktop pet sprite.",
+    "Make it a full-body front-facing chibi character with a big head, tiny body, large expressive eyes, and a clean readable silhouette.",
+    "Preserve the key identity features from the source image, including outfit shape, hat, hair color, wand, and overall white fantasy styling.",
+    "Use crisp pixel-art edges, visible pixel blocks, limited colors, gentle anime-style shading, and a polished retro game sprite look.",
+    "Keep the result clearly non-photorealistic, not painterly, not a soft illustration, and not a realistic doll photo edit.",
+    "Use one centered character only with transparent or very plain background."
   ].join(" ");
 }
 
