@@ -18,6 +18,8 @@ const PET_WINDOW_SIZE = 240;
 let petWindow;
 let sidebarWindow;
 let mainWindow;
+const jsonWriteQueues = new Map();
+const windowBoundsPersistTimers = new Map();
 
 function formatDateKey(date = new Date()) {
   const year = date.getFullYear();
@@ -303,9 +305,24 @@ function recoverConfigFromCorruptRaw(raw) {
 }
 
 async function writeJsonAtomically(filePath, value) {
-  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-  await fs.writeFile(tempPath, JSON.stringify(value, null, 2), "utf8");
-  await fs.rename(tempPath, filePath);
+  const runWrite = async () => {
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    const tempPath = `${filePath}.${process.pid}.${Date.now()}.${crypto.randomUUID()}.tmp`;
+    await fs.writeFile(tempPath, JSON.stringify(value, null, 2), "utf8");
+    await fs.rename(tempPath, filePath);
+  };
+
+  const previous = jsonWriteQueues.get(filePath) || Promise.resolve();
+  const next = previous.catch(() => {}).then(runWrite);
+  jsonWriteQueues.set(filePath, next);
+
+  try {
+    await next;
+  } finally {
+    if (jsonWriteQueues.get(filePath) === next) {
+      jsonWriteQueues.delete(filePath);
+    }
+  }
 }
 
 async function rewriteRecoveredJson(filePath, raw, recovered) {
@@ -563,6 +580,20 @@ async function persistWindowBounds(key, bounds) {
   await saveConfig({ windows: { ...(config.windows || {}), [key]: bounds } });
 }
 
+function schedulePersistWindowBounds(key, bounds, delayMs = 120) {
+  const existingTimer = windowBoundsPersistTimers.get(key);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+
+  const timer = setTimeout(() => {
+    windowBoundsPersistTimers.delete(key);
+    persistWindowBounds(key, bounds).catch(() => {});
+  }, delayMs);
+
+  windowBoundsPersistTimers.set(key, timer);
+}
+
 function getPetWindowBoundsFromConfig(config) {
   const display = screen.getPrimaryDisplay().workArea;
   const fallback = {
@@ -629,7 +660,7 @@ function createPetWindow(config) {
   petWindow.loadFile(path.join(__dirname, "pet.html"));
   petWindow.on("move", () => {
     positionSidebar();
-    persistWindowBounds("pet", petWindow.getBounds()).catch(() => {});
+    schedulePersistWindowBounds("pet", petWindow.getBounds());
   });
 }
 
@@ -1191,7 +1222,7 @@ ipcMain.handle("pet:update-position", async (_event, payload) => {
   });
   petWindow.setBounds(nextBounds);
   positionSidebar();
-  await persistWindowBounds("pet", nextBounds);
+  schedulePersistWindowBounds("pet", nextBounds);
   return { ok: true };
 });
 ipcMain.handle("pet:set-interaction-state", async (_event, payload) => {
