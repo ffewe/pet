@@ -113,12 +113,16 @@ function renderSidebar(payload) {
 
 async function generatePetPreview(sourcePath) {
   const config = await window.desktopPet.readConfig();
+  let rawSource;
+
   if (config.providerMode === "local") {
-    const generatedDataUrl = await window.previewTools.generateLocalChibiPreview(sourcePath);
-    return (await window.desktopPet.saveGeneratedDataUrl(generatedDataUrl)).filePath;
+    rawSource = await window.previewTools.generateLocalChibiPreview(sourcePath);
+  } else {
+    rawSource = (await window.desktopPet.generatePixelPreview(sourcePath, "pet-chibi")).filePath;
   }
 
-  return (await window.desktopPet.generatePixelPreview(sourcePath, "pet-chibi")).filePath;
+  const transparentAsset = await window.previewTools.createTransparentPetAsset(rawSource);
+  return (await window.desktopPet.saveGeneratedDataUrl(transparentAsset.dataUrl)).filePath;
 }
 
 async function handleUploadPet() {
@@ -132,14 +136,14 @@ async function handleUploadPet() {
   sidebarElements.modalSourcePreview.hidden = false;
   sidebarElements.modalGeneratedPreview.hidden = true;
   sidebarElements.confirmPreviewButton.disabled = true;
-  openPreviewModal("Generating a chibi desktop pet preview...");
+  openPreviewModal("Generating a transparent chibi pet asset...");
 
   try {
     const previewPath = await generatePetPreview(selected.filePath);
     sidebarState.previewPath = previewPath;
     sidebarElements.modalGeneratedPreview.src = window.previewTools.filePathToUrl(previewPath);
     sidebarElements.modalGeneratedPreview.hidden = false;
-    sidebarElements.modalMessage.textContent = "Preview ready. Confirm to replace the current pet.";
+    sidebarElements.modalMessage.textContent = "Transparent asset ready. Confirm to replace the current pet.";
     sidebarElements.confirmPreviewButton.disabled = false;
   } catch (error) {
     sidebarElements.modalMessage.textContent = error.message || "Preview generation failed.";

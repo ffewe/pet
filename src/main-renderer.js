@@ -16,6 +16,7 @@ const dom = {
   headerPetName: document.getElementById("headerPetName"),
   headerBubble: document.getElementById("headerBubble"),
   currencyBalance: document.getElementById("currencyBalance"),
+  headerExportButton: document.getElementById("headerExportButton"),
   showSidebarButton: document.getElementById("showSidebarButton"),
   tabButtons: [...document.querySelectorAll(".tab-button")],
   tabPanels: [...document.querySelectorAll(".tab-panel")],
@@ -433,12 +434,15 @@ function closePetModal() {
 
 async function generatePetPreview(sourcePath) {
   const config = await window.desktopPet.readConfig();
+  let rawSource;
   if (config.providerMode === "local") {
-    const dataUrl = await window.previewTools.generateLocalChibiPreview(sourcePath);
-    return (await window.desktopPet.saveGeneratedDataUrl(dataUrl)).filePath;
+    rawSource = await window.previewTools.generateLocalChibiPreview(sourcePath);
+  } else {
+    rawSource = (await window.desktopPet.generatePixelPreview(sourcePath, "pet-chibi")).filePath;
   }
 
-  return (await window.desktopPet.generatePixelPreview(sourcePath, "pet-chibi")).filePath;
+  const transparentAsset = await window.previewTools.createTransparentPetAsset(rawSource);
+  return (await window.desktopPet.saveGeneratedDataUrl(transparentAsset.dataUrl)).filePath;
 }
 
 async function generateRewardPreview(sourcePath) {
@@ -516,6 +520,9 @@ dom.tabButtons.forEach((button) => {
 });
 
 dom.showSidebarButton.addEventListener("click", () => window.desktopPet.toggleSidebar());
+dom.headerExportButton.addEventListener("click", async () => {
+  dom.exportPreviewButton.click();
+});
 
 dom.taskForm.addEventListener("submit", async (event) => {
   event.preventDefault();

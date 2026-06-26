@@ -3,13 +3,17 @@
     return `file://${filePath.replace(/\\/g, "/")}`;
   }
 
-  function loadImage(filePath) {
+  function loadImageSource(src) {
     return new Promise((resolve, reject) => {
       const image = new Image();
       image.onload = () => resolve(image);
       image.onerror = () => reject(new Error("Failed to load the selected image."));
-      image.src = filePathToUrl(filePath);
+      image.src = src;
     });
+  }
+
+  function loadImage(filePath) {
+    return loadImageSource(filePathToUrl(filePath));
   }
 
   function quantizeChannel(value, step) {
@@ -203,9 +207,209 @@
     return stickerCanvas.toDataURL("image/png");
   }
 
+  function isNearWhiteBackground(red, green, blue, alpha) {
+    if (alpha < 20) {
+      return true;
+    }
+
+    const minChannel = Math.min(red, green, blue);
+    const maxChannel = Math.max(red, green, blue);
+    const average = (red + green + blue) / 3;
+    return average > 226 && maxChannel - minChannel < 28;
+  }
+
+  function removeBorderConnectedBackground(imageData, width, height) {
+    const { data } = imageData;
+    const backgroundMask = new Uint8Array(width * height);
+    const queue = [];
+
+    function tryPush(x, y) {
+      if (x < 0 || y < 0 || x >= width || y >= height) {
+        return;
+      }
+      const index = y * width + x;
+      if (backgroundMask[index]) {
+        return;
+      }
+
+      const offset = index * 4;
+      if (
+        isNearWhiteBackground(
+          data[offset],
+          data[offset + 1],
+          data[offset + 2],
+          data[offset + 3]
+        )
+      ) {
+        backgroundMask[index] = 1;
+        queue.push(index);
+      }
+    }
+
+    for (let x = 0; x < width; x += 1) {
+      tryPush(x, 0);
+      tryPush(x, height - 1);
+    }
+
+    for (let y = 0; y < height; y += 1) {
+      tryPush(0, y);
+      tryPush(width - 1, y);
+    }
+
+    let removedCount = 0;
+    while (queue.length) {
+      const index = queue.shift();
+      const x = index % width;
+      const y = Math.floor(index / width);
+      const offset = index * 4;
+      if (data[offset + 3] !== 0) {
+        data[offset + 3] = 0;
+        removedCount += 1;
+      }
+
+      tryPush(x - 1, y);
+      tryPush(x + 1, y);
+      tryPush(x, y - 1);
+      tryPush(x, y + 1);
+    }
+
+    return removedCount;
+  }
+
+  function findOpaqueBounds(data, width, height) {
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const offset = (y * width + x) * 4;
+        if (data[offset + 3] < 18) {
+          continue;
+        }
+
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+
+    if (maxX < minX || maxY < minY) {
+      return null;
+    }
+
+    return { minX, minY, maxX, maxY };
+  }
+
+  function sampleCornerOpacity(data, width, height, xStart, yStart, sampleSize) {
+    let opaqueCount = 0;
+    let total = 0;
+    for (let y = yStart; y < yStart + sampleSize; y += 1) {
+      for (let x = xStart; x < xStart + sampleSize; x += 1) {
+        const offset = (y * width + x) * 4;
+        if (data[offset + 3] > 24) {
+          opaqueCount += 1;
+        }
+        total += 1;
+      }
+    }
+    return total ? opaqueCount / total : 0;
+  }
+
+  async function createTransparentPetAsset(source) {
+    const image = source.startsWith("data:")
+      ? await loadImageSource(source)
+      : await loadImage(source);
+
+    const baseCanvas = document.createElement("canvas");
+    baseCanvas.width = image.width;
+    baseCanvas.height = image.height;
+    const baseContext = baseCanvas.getContext("2d", { willReadFrequently: true });
+    baseContext.drawImage(image, 0, 0);
+
+    const imageData = baseContext.getImageData(0, 0, image.width, image.height);
+    const removedCount = removeBorderConnectedBackground(imageData, image.width, image.height);
+    baseContext.putImageData(imageData, 0, 0);
+
+    const bounds = findOpaqueBounds(imageData.data, image.width, image.height);
+    if (!bounds) {
+      throw new Error("Transparent asset processing removed the whole image.");
+    }
+
+    const padding = 16;
+    const cropX = Math.max(0, bounds.minX - padding);
+    const cropY = Math.max(0, bounds.minY - padding);
+    const cropWidth = Math.min(image.width - cropX, bounds.maxX - bounds.minX + 1 + padding * 2);
+    const cropHeight = Math.min(image.height - cropY, bounds.maxY - bounds.minY + 1 + padding * 2);
+
+    const croppedCanvas = document.createElement("canvas");
+    croppedCanvas.width = cropWidth;
+    croppedCanvas.height = cropHeight;
+    const croppedContext = croppedCanvas.getContext("2d", { willReadFrequently: true });
+    croppedContext.drawImage(
+      baseCanvas,
+      cropX,
+      cropY,
+      cropWidth,
+      cropHeight,
+      0,
+      0,
+      cropWidth,
+      cropHeight
+    );
+
+    const croppedImageData = croppedContext.getImageData(0, 0, cropWidth, cropHeight);
+    const cornerSample = Math.max(6, Math.floor(Math.min(cropWidth, cropHeight) * 0.08));
+    const cornerOpacities = [
+      sampleCornerOpacity(croppedImageData.data, cropWidth, cropHeight, 0, 0, cornerSample),
+      sampleCornerOpacity(
+        croppedImageData.data,
+        cropWidth,
+        cropHeight,
+        cropWidth - cornerSample,
+        0,
+        cornerSample
+      ),
+      sampleCornerOpacity(
+        croppedImageData.data,
+        cropWidth,
+        cropHeight,
+        0,
+        cropHeight - cornerSample,
+        cornerSample
+      ),
+      sampleCornerOpacity(
+        croppedImageData.data,
+        cropWidth,
+        cropHeight,
+        cropWidth - cornerSample,
+        cropHeight - cornerSample,
+        cornerSample
+      )
+    ];
+
+    const failedCorners = cornerOpacities.filter((ratio) => ratio > 0.55).length;
+    const averageCornerOpacity =
+      cornerOpacities.reduce((sum, ratio) => sum + ratio, 0) / cornerOpacities.length;
+    const removedRatio = removedCount / Math.max(1, image.width * image.height);
+    if (failedCorners >= 3 || (removedRatio < 0.015 && averageCornerOpacity > 0.22)) {
+      throw new Error(
+        "Generated pet asset still appears to have a solid white background. Please regenerate."
+      );
+    }
+
+    return {
+      dataUrl: croppedCanvas.toDataURL("image/png"),
+      removedRatio
+    };
+  }
+
   window.previewTools = {
     filePathToUrl,
     generateLocalPixelPreview,
-    generateLocalChibiPreview
+    generateLocalChibiPreview,
+    createTransparentPetAsset
   };
 })();
