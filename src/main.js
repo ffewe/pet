@@ -112,9 +112,10 @@ function buildPrompt(renderStyle = "pet-chibi") {
   }
 
   return [
-    "Transform the uploaded character image into cute cartoon pixel art.",
-    "Keep the main subject recognizable and preserve distinctive colors and silhouette.",
-    "Use a clean, charming, game-ready pixel art look suitable for a desktop pet.",
+    "Transform the uploaded character image into delicate cute cartoon pixel art.",
+    "Keep the main subject recognizable and preserve the distinctive silhouette, outfit layers, hair color, and facial feeling from the source image.",
+    "Use a refined hand-crafted pixel art look with visible pixel blocks, soft anime-like shading, large bright eyes, and detailed clothing decoration.",
+    "Make the result feel like an adorable fantasy doll character sprite rather than a realistic photo edit, rough chunky sprite, or ordinary illustration.",
     "Keep the composition focused on a single subject and avoid adding extra characters or complex backgrounds."
   ].join(" ");
 }
