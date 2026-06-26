@@ -727,7 +727,9 @@ async function openMainWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) {
     await createMainWindow();
   }
+  hideSidebar();
   mainWindow.show();
+  mainWindow.moveTop();
   mainWindow.focus();
 }
 
@@ -737,13 +739,19 @@ function navigateMainWindow(tab) {
   }
 }
 
+function hideSidebar() {
+  if (sidebarWindow && !sidebarWindow.isDestroyed() && sidebarWindow.isVisible()) {
+    sidebarWindow.hide();
+  }
+}
+
 async function toggleSidebar() {
   if (!sidebarWindow || sidebarWindow.isDestroyed()) {
     await createSidebarWindow();
   }
 
   if (sidebarWindow.isVisible()) {
-    sidebarWindow.hide();
+    hideSidebar();
     return { visible: false };
   }
 
