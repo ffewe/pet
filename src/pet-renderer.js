@@ -129,6 +129,22 @@ function showBubble(text, holdMs = 2600) {
   }, holdMs);
 }
 
+async function applyImmediatePythonReaction(eventType, meta = {}) {
+  try {
+    const reaction = await window.desktopPet.runPythonPetReaction(eventType, meta);
+    setStageState(
+      reaction.interactionState || "idle",
+      reaction.motionState || "idle",
+      reaction.expressionOverlayState || "smile"
+    );
+    petEffect.dataset.mode = reaction.interactionState || "idle";
+    showBubble(reaction.bubbleText || "I am here.");
+    return reaction;
+  } catch {
+    return null;
+  }
+}
+
 function scheduleBlink(config) {
   if (petRuntime.blinkTimer) {
     clearTimeout(petRuntime.blinkTimer);
@@ -235,6 +251,7 @@ function renderPet(payload) {
 
 async function sendTapReaction(kind) {
   try {
+    await applyImmediatePythonReaction(kind === "pester" ? "pester" : "tap");
     await window.desktopPet.triggerPetReaction(kind === "pester" ? "pester" : "tap");
   } catch (error) {
     showBubble(error.message || "Reaction failed.");
@@ -302,6 +319,7 @@ petCharacter.addEventListener("pointerdown", async (event) => {
   petRuntime.lastPointer = { x: event.screenX, y: event.screenY };
   petCharacter.setPointerCapture(event.pointerId);
   setStageState("dragged", "drag", "surprised");
+  await applyImmediatePythonReaction("drag-start");
   await window.desktopPet.triggerPetReaction("drag-start");
 });
 
@@ -326,6 +344,7 @@ petCharacter.addEventListener("pointerup", async (event) => {
 
   petRuntime.isDragging = false;
   petCharacter.releasePointerCapture(event.pointerId);
+  await applyImmediatePythonReaction("drag-end");
   await window.desktopPet.triggerPetReaction("drag-end");
   window.setTimeout(() => {
     petRuntime.movedDuringDrag = false;
