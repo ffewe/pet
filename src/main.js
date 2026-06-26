@@ -664,13 +664,14 @@ function createPetWindow(config) {
   });
 }
 
-function createSidebarWindow() {
+async function createSidebarWindow() {
   sidebarWindow = new BrowserWindow({
     width: SIDEBAR_WIDTH,
     height: SIDEBAR_HEIGHT,
     frame: false,
     show: false,
     resizable: false,
+    alwaysOnTop: true,
     backgroundColor: "#f6f0e2",
     autoHideMenuBar: true,
     webPreferences: {
@@ -680,7 +681,7 @@ function createSidebarWindow() {
     }
   });
 
-  sidebarWindow.loadFile(path.join(__dirname, "sidebar.html"));
+  await sidebarWindow.loadFile(path.join(__dirname, "sidebar.html"));
   sidebarWindow.on("close", (event) => {
     if (!app.isQuitting) {
       event.preventDefault();
@@ -738,7 +739,7 @@ function navigateMainWindow(tab) {
 
 async function toggleSidebar() {
   if (!sidebarWindow || sidebarWindow.isDestroyed()) {
-    createSidebarWindow();
+    await createSidebarWindow();
   }
 
   if (sidebarWindow.isVisible()) {
@@ -748,6 +749,7 @@ async function toggleSidebar() {
 
   positionSidebar();
   sidebarWindow.show();
+  sidebarWindow.moveTop();
   sidebarWindow.focus();
   return { visible: true };
 }
@@ -1573,14 +1575,14 @@ ipcMain.handle("settlement:settle-today", async () => {
 app.whenReady().then(async () => {
   await ensureAppDirs();
   createPetWindow(await readConfig());
-  createSidebarWindow();
+  await createSidebarWindow();
 
   app.on("activate", async () => {
     if (!petWindow || petWindow.isDestroyed()) {
       createPetWindow(await readConfig());
     }
     if (!sidebarWindow || sidebarWindow.isDestroyed()) {
-      createSidebarWindow();
+      await createSidebarWindow();
     }
   });
 });

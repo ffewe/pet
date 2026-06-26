@@ -48,6 +48,13 @@ function setPetImage(filePath, fallbackLetter) {
   petFallback.hidden = true;
 }
 
+petImage.addEventListener("error", () => {
+  petStage.dataset.hasImage = "false";
+  petImage.hidden = true;
+  petImage.removeAttribute("src");
+  petFallback.hidden = false;
+});
+
 function showBubble(text, holdMs = 2600) {
   petBubble.textContent = text;
   if (petRuntime.localBubbleTimer) {
