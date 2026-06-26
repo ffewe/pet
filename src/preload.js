@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer } = require("electron");
+const { runPythonPetReaction } = require("./python-reaction-bridge");
 
 const api = {
   readState: () => ipcRenderer.invoke("state:read"),
@@ -20,6 +21,7 @@ const api = {
     ipcRenderer.invoke("pet:set-interaction-state", { state, ...(meta || {}) }),
   triggerPetReaction: (eventType, meta) =>
     ipcRenderer.invoke("pet:trigger-reaction", { eventType, meta }),
+  runPythonPetReaction: (eventType, meta) => runPythonPetReaction(eventType, meta),
   updatePetPosition: (deltaX, deltaY) =>
     ipcRenderer.invoke("pet:update-position", { deltaX, deltaY }),
   confirmRewardPreview: (payload) => ipcRenderer.invoke("reward:confirm-preview", payload),
