@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Desktop Pet Sidebar</title>
+    <link rel="stylesheet" href="./sidebar.css" />
+  </head>
+  <body>
+    <main class="sidebar-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Desktop Pet</p>
+          <h1 id="petName">Mochi</h1>
+        </div>
+        <div class="topbar-actions">
+          <button id="openSettingsButton" class="icon-button" type="button" title="Open settings">
+            S
+          </button>
+          <button id="openMainButton" class="primary-button" type="button">Open main page</button>
+        </div>
+      </header>
+
+      <section class="card pet-card">
+        <div class="pet-hero">
+          <div class="pet-image-wrap">
+            <img id="petPreview" alt="Pet preview" hidden />
+            <div id="petPreviewFallback" class="pet-placeholder">M</div>
+          </div>
+          <div class="pet-meta">
+            <span id="petMood" class="status-pill">Curious</span>
+            <p id="petStatusText" class="status-copy">I am here.</p>
+            <p id="equippedSummary" class="equipped-summary">Equipped: base look</p>
+          </div>
+        </div>
+        <button id="uploadPetButton" class="secondary-button" type="button">Upload new pet</button>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <div>
+            <p class="section-label">Tasks</p>
+            <h2>Unfinished today</h2>
+          </div>
+          <span id="taskProgress" class="status-pill muted">0/0</span>
+        </div>
+        <div id="taskList" class="task-list"></div>
+        <button id="openMainTasksButton" class="ghost-button" type="button">View all in main page</button>
+      </section>
+
+      <section class="card summary-card">
+        <p class="section-label">Status</p>
+        <p id="settlementSummary" class="summary-copy">0 task(s) left today.</p>
+      </section>
+    </main>
+
+    <div id="previewModal" class="modal hidden">
+      <div class="modal-card">
+        <div class="section-head">
+          <div>
+            <p class="section-label">Pet Preview</p>
+            <h2>Confirm the new chibi form</h2>
+          </div>
+        </div>
+        <div class="preview-grid">
+          <div class="preview-panel">
+            <span>Source</span>
+            <img id="modalSourcePreview" alt="Selected source" hidden />
+          </div>
+          <div class="preview-panel">
+            <span>Chibi preview</span>
+            <img id="modalGeneratedPreview" alt="Generated preview" hidden />
+          </div>
+        </div>
+        <p id="modalMessage" class="status-copy"></p>
+        <div class="modal-actions">
+          <button id="cancelPreviewButton" class="ghost-button" type="button">Cancel</button>
+          <button id="confirmPreviewButton" class="primary-button" type="button" disabled>
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./preview-tools.js"></script>
+    <script src="./sidebar-renderer.js"></script>
+  </body>
+</html>

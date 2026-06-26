@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Desktop Pet Console</title>
+    <link rel="stylesheet" href="./main.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Desktop Pet Console</p>
+          <h1 id="headerPetName">Mochi</h1>
+          <p id="headerBubble" class="header-copy">We have time. Let's make today cute and useful.</p>
+        </div>
+        <div class="header-actions">
+          <div class="currency-card">
+            <span>Coins</span>
+            <strong id="currencyBalance">0</strong>
+          </div>
+          <button id="showSidebarButton" class="secondary-button" type="button">Toggle sidebar</button>
+        </div>
+      </header>
+
+      <nav class="tab-bar" aria-label="Main sections">
+        <button class="tab-button active" data-tab="today" type="button">Today</button>
+        <button class="tab-button" data-tab="warehouse" type="button">Warehouse</button>
+        <button class="tab-button" data-tab="outfits" type="button">Outfits</button>
+        <button class="tab-button" data-tab="settings" type="button">Settings</button>
+      </nav>
+
+      <main class="page-grid">
+        <section class="tab-panel active" data-panel="today">
+          <div class="panel-grid two-column">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="panel-label">Tasks</p>
+                  <h2>Today</h2>
+                </div>
+                <span id="todayProgress" class="status-pill muted">0/0</span>
+              </div>
+              <form id="taskForm" class="inline-form">
+                <input id="taskInput" type="text" placeholder="Add a task for today" maxlength="60" />
+                <button class="primary-button" type="submit">Add task</button>
+              </form>
+              <div id="todayTaskList" class="stack-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="panel-label">Reward</p>
+                  <h2>Today's reward</h2>
+                </div>
+              </div>
+              <div id="todayRewardCard" class="reward-highlight"></div>
+              <div class="settlement-card">
+                <p class="panel-label">Settlement</p>
+                <p id="todaySettlementSummary" class="settlement-copy"></p>
+                <button id="settleButton" class="primary-button" type="button">Settle today</button>
+              </div>
+            </section>
+          </div>
+          <section class="panel pet-preview-panel">
+            <div class="panel-head">
+              <div>
+                <p class="panel-label">Pet Preview</p>
+                <h2>Generate desktop pet art</h2>
+              </div>
+              <button id="openPetModalButton" class="primary-button" type="button">Generate pet</button>
+            </div>
+            <div class="preview-grid inline-preview-grid">
+              <div class="preview-card">
+                <span>Current pet</span>
+                <img id="currentPetPreview" alt="Current pet preview" hidden />
+                <div id="currentPetPreviewPlaceholder" class="reward-image placeholder">P</div>
+              </div>
+              <div class="preview-card">
+                <span>Latest generated</span>
+                <img id="latestPetPreview" alt="Latest pet preview" hidden />
+                <div id="latestPetPreviewPlaceholder" class="reward-image placeholder">?</div>
+              </div>
+            </div>
+            <p id="petPreviewMessage" class="helper-text">Generate a pet preview here, then confirm or export it.</p>
+          </section>
+        </section>
+
+        <section class="tab-panel" data-panel="warehouse">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="panel-label">Rewards</p>
+                <h2>Warehouse</h2>
+              </div>
+              <button id="openRewardModalButton" class="primary-button" type="button">Add reward</button>
+            </div>
+            <div id="warehouseFilters" class="filter-row">
+              <button class="filter-chip active" data-filter="all" type="button">All</button>
+              <button class="filter-chip" data-filter="top" type="button">Top</button>
+              <button class="filter-chip" data-filter="bottom" type="button">Bottom</button>
+              <button class="filter-chip" data-filter="outerwear" type="button">Outerwear</button>
+              <button class="filter-chip" data-filter="onepiece" type="button">Onepiece</button>
+              <button class="filter-chip" data-filter="shoes" type="button">Shoes</button>
+              <button class="filter-chip" data-filter="headwear" type="button">Headwear</button>
+              <button class="filter-chip" data-filter="handheld" type="button">Handheld</button>
+              <button class="filter-chip" data-filter="food" type="button">Food</button>
+            </div>
+            <div id="warehouseGrid" class="card-grid"></div>
+          </section>
+        </section>
+
+        <section class="tab-panel" data-panel="outfits">
+          <div class="panel-grid two-column">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="panel-label">Create outfit</p>
+                  <h2>Group items manually</h2>
+                </div>
+              </div>
+              <form id="outfitForm" class="outfit-form">
+                <input id="outfitNameInput" type="text" placeholder="Outfit name" maxlength="40" />
+                <div id="outfitItemPicker" class="picker-grid"></div>
+                <button class="primary-button" type="submit">Create outfit</button>
+              </form>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="panel-label">Saved outfits</p>
+                  <h2>Manage and wear</h2>
+                </div>
+              </div>
+              <div id="outfitList" class="stack-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-panel="settings">
+          <section class="panel settings-panel">
+            <div class="panel-head">
+              <div>
+                <p class="panel-label">Settings</p>
+                <h2>Image provider and pet behavior</h2>
+              </div>
+              <span id="configStatus" class="status-pill muted">Loading...</span>
+            </div>
+            <div class="settings-grid">
+              <label class="field">
+                <span>Provider Mode</span>
+                <select id="providerModeInput">
+                  <option value="local">Local Compat</option>
+                  <option value="remote-openai-images">Remote OpenAI Images</option>
+                  <option value="remote-chat-compat">Remote Chat Compat</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>API Key</span>
+                <input id="apiKeyInput" type="password" placeholder="sk-..." autocomplete="off" />
+              </label>
+              <label class="field">
+                <span>Base URL</span>
+                <input id="baseUrlInput" type="text" placeholder="https://api.openai.com/v1" />
+              </label>
+              <label class="field">
+                <span>Model</span>
+                <input id="modelInput" type="text" placeholder="gpt-image-2" />
+              </label>
+              <label class="field">
+                <span>Endpoint Mode</span>
+                <select id="endpointModeInput">
+                  <option value="edits">images/edits</option>
+                  <option value="generations">images/generations</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Pet style</span>
+                <select id="styleModeInput">
+                  <option value="chibi">Chibi desktop pet</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Interaction level</span>
+                <select id="interactionLevelInput">
+                  <option value="strong">Strong</option>
+                  <option value="medium">Medium</option>
+                  <option value="light">Light</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Idle bubble frequency</span>
+                <select id="idleBubbleFrequencyInput">
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+              <label class="field checkbox-field">
+                <input id="autoBlinkInput" type="checkbox" />
+                <span>Auto blink</span>
+              </label>
+              <label class="field checkbox-field">
+                <input id="autoNapInput" type="checkbox" />
+                <span>Auto sleepy moments</span>
+              </label>
+            </div>
+            <div class="settings-actions">
+              <button id="saveConfigButton" class="primary-button" type="button">Save settings</button>
+              <button id="exportPreviewButton" class="secondary-button" type="button">Export latest preview</button>
+            </div>
+            <p id="settingsMessage" class="helper-text"></p>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div id="rewardModal" class="modal hidden">
+      <div class="modal-card">
+        <div class="panel-head">
+          <div>
+            <p class="panel-label">Reward Preview</p>
+            <h2>Add a new reward candidate</h2>
+          </div>
+        </div>
+        <form id="rewardForm" class="reward-form">
+          <div class="modal-form-row">
+            <label class="field">
+              <span>Name</span>
+              <input id="rewardNameInput" type="text" maxlength="40" placeholder="Example: Strawberry hoodie" />
+            </label>
+            <label class="field">
+              <span>Category</span>
+              <select id="rewardTypeInput">
+                <option value="top">Top</option>
+                <option value="bottom">Bottom</option>
+                <option value="outerwear">Outerwear</option>
+                <option value="onepiece">Onepiece</option>
+                <option value="shoes">Shoes</option>
+                <option value="headwear">Headwear</option>
+                <option value="handheld">Handheld</option>
+                <option value="food">Food</option>
+              </select>
+            </label>
+          </div>
+          <div class="modal-actions start">
+            <button id="pickRewardImageButton" class="secondary-button" type="button">Choose source and generate</button>
+          </div>
+          <div class="preview-grid">
+            <div class="preview-card">
+              <span>Source</span>
+              <img id="rewardSourcePreview" alt="Reward source preview" hidden />
+            </div>
+            <div class="preview-card">
+              <span>Preview</span>
+              <img id="rewardGeneratedPreview" alt="Reward preview" hidden />
+            </div>
+          </div>
+          <p id="rewardModalMessage" class="helper-text"></p>
+          <div class="modal-actions">
+            <button id="closeRewardModalButton" class="ghost-button" type="button">Cancel</button>
+            <button id="confirmRewardButton" class="primary-button" type="submit" disabled>Confirm</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="petModal" class="modal hidden">
+      <div class="modal-card">
+        <div class="panel-head">
+          <div>
+            <p class="panel-label">Pet Preview</p>
+            <h2>Generate and confirm a pet sprite</h2>
+          </div>
+        </div>
+        <div class="modal-actions start">
+          <button id="pickPetImageButton" class="secondary-button" type="button">Choose source and generate</button>
+        </div>
+        <div class="preview-grid">
+          <div class="preview-card">
+            <span>Source</span>
+            <img id="petSourcePreview" alt="Pet source preview" hidden />
+          </div>
+          <div class="preview-card">
+            <span>Preview</span>
+            <img id="petGeneratedPreview" alt="Pet generated preview" hidden />
+          </div>
+        </div>
+        <p id="petModalMessage" class="helper-text"></p>
+        <div class="modal-actions">
+          <button id="closePetModalButton" class="ghost-button" type="button">Cancel</button>
+          <button id="confirmPetButton" class="primary-button" type="button" disabled>Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./preview-tools.js"></script>
+    <script src="./main-renderer.js"></script>
+  </body>
+</html>

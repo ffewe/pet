@@ -290,6 +290,16 @@ function isTimeoutLikeImageError(error) {
   return message.includes("524") || message.includes("timeout") || message.includes("a timeout occurred");
 }
 
+function isRetryableImageError(error) {
+  const message = `${error && error.message ? error.message : error}`.toLowerCase();
+  return (
+    isTimeoutLikeImageError(error) ||
+    message.includes("fetch failed") ||
+    message.includes("econnreset") ||
+    message.includes("socket hang up")
+  );
+}
+
 async function requestChatCompatImage(sourceImagePath, config, prompt) {
   const imageDataUrl = await toDataUrl(sourceImagePath);
   return fetch(buildEndpointUrl(config.baseUrl, "/chat/completions"), {
@@ -408,7 +418,15 @@ async function writeJsonAtomically(filePath, value) {
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     const tempPath = `${filePath}.${process.pid}.${Date.now()}.${crypto.randomUUID()}.tmp`;
     await fs.writeFile(tempPath, JSON.stringify(value, null, 2), "utf8");
-    await fs.rename(tempPath, filePath);
+    try {
+      await fs.rename(tempPath, filePath);
+    } catch (error) {
+      if (!["EPERM", "EACCES"].includes(error.code)) {
+        throw error;
+      }
+      await fs.copyFile(tempPath, filePath);
+      await fs.unlink(tempPath).catch(() => {});
+    }
   };
 
   const previous = jsonWriteQueues.get(filePath) || Promise.resolve();
@@ -1023,7 +1041,7 @@ async function callImageProvider(sourceImagePath, config, renderStyle = "pet-chi
       );
     } catch (error) {
       lastError = error;
-      const shouldRetry = index < requestSteps.length - 1 && isTimeoutLikeImageError(error);
+      const shouldRetry = index < requestSteps.length - 1 && isRetryableImageError(error);
       if (!shouldRetry) {
         throw error;
       }
