@@ -1137,6 +1137,23 @@ function applyEquipRules(currentIds, item, library) {
   return [...nextIds];
 }
 
+function clearSystemInitialWearables(state) {
+  const removedIds = new Set(
+    state.rewardLibrary
+      .filter((item) => item.systemGenerated && item.sourceTag === "pet-initial-wearable")
+      .map((item) => item.id)
+  );
+
+  if (!removedIds.size) {
+    return;
+  }
+
+  state.rewardLibrary = state.rewardLibrary.filter((item) => !removedIds.has(item.id));
+  state.petProfile.equippedItemIds = state.petProfile.equippedItemIds.filter(
+    (itemId) => !removedIds.has(itemId)
+  );
+}
+
 function applyPetEvent(state, eventType, meta = {}) {
   switch (eventType) {
     case "tap":
@@ -1376,12 +1393,45 @@ ipcMain.handle("pet:confirm-preview", async (_event, payload) => {
     throw new Error("Pet assets must be transparent PNG or WebP resources.");
   }
   return mutateState((state) => {
+    clearSystemInitialWearables(state);
+
     updatePetProfile(state, {
       sourceImagePath: payload.sourcePath || state.petProfile.sourceImagePath,
       basePetRenderPath: payload.previewPath,
       currentPetImagePath: payload.previewPath,
       currentCompositeImagePath: payload.previewPath
     });
+
+    const initialWearables = Array.isArray(payload.initialWearables) ? payload.initialWearables : [];
+    for (const wearable of initialWearables) {
+      if (!wearable?.slot || !wearable?.wearableLayerPath) {
+        continue;
+      }
+
+      const item = {
+        id: makeId("reward"),
+        name: wearable.name || `Initial ${wearable.slot}`,
+        type: "wearable",
+        slot: wearable.slot,
+        sourceImagePath: payload.previewPath,
+        pixelImagePath: wearable.pixelImagePath || wearable.wearableLayerPath,
+        wearableLayerPath: wearable.wearableLayerPath,
+        renderMode: wearable.renderMode || "wearable-layer",
+        status: "owned",
+        equipped: true,
+        outfitSetIds: [],
+        systemGenerated: true,
+        sourceTag: "pet-initial-wearable"
+      };
+
+      state.rewardLibrary.unshift(item);
+      state.petProfile.equippedItemIds = applyEquipRules(
+        state.petProfile.equippedItemIds,
+        item,
+        state.rewardLibrary
+      );
+    }
+
     setPetReaction(state, {
       currentStatus: "updated",
       interactionState: "happy",

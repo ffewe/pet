@@ -565,7 +565,32 @@ dom.confirmPetButton.addEventListener("click", async () => {
   if (!appState.petDraft.previewPath) {
     return;
   }
-  await window.desktopPet.confirmPetPreview(appState.petDraft.sourcePath, appState.petDraft.previewPath);
+  const baseWearableSlots = ["top", "bottom", "shoes"];
+  const initialWearables = [];
+
+  for (const slot of baseWearableSlots) {
+    const wearableLayerAsset = await window.previewTools.createWearableLayerAsset(
+      appState.petDraft.previewPath,
+      slot
+    );
+    const wearableLayerPath = (
+      await window.desktopPet.saveGeneratedDataUrl(wearableLayerAsset.dataUrl)
+    ).filePath;
+
+    initialWearables.push({
+      name: `Initial ${SLOT_LABELS[slot] || slot}`,
+      slot,
+      pixelImagePath: wearableLayerPath,
+      wearableLayerPath,
+      renderMode: "wearable-layer"
+    });
+  }
+
+  await window.desktopPet.confirmPetPreview(
+    appState.petDraft.sourcePath,
+    appState.petDraft.previewPath,
+    { initialWearables }
+  );
   dom.petModalMessage.textContent = "Pet preview confirmed.";
   closePetModal();
 });

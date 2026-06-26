@@ -14,8 +14,8 @@ const api = {
     ipcRenderer.invoke("image:save-generated-data-url", { dataUrl }),
   exportGeneratedPreview: (generatedPath) =>
     ipcRenderer.invoke("image:export-preview", { generatedPath }),
-  confirmPetPreview: (sourcePath, previewPath) =>
-    ipcRenderer.invoke("pet:confirm-preview", { sourcePath, previewPath }),
+  confirmPetPreview: (sourcePath, previewPath, meta) =>
+    ipcRenderer.invoke("pet:confirm-preview", { sourcePath, previewPath, ...(meta || {}) }),
   setPetInteractionState: (state, meta) =>
     ipcRenderer.invoke("pet:set-interaction-state", { state, ...(meta || {}) }),
   triggerPetReaction: (eventType, meta) =>
