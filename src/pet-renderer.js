@@ -18,7 +18,8 @@ const petRuntime = {
   hoverFiredAt: 0,
   clickCount: 0,
   clickResetTimer: null,
-  lastPointer: { x: 0, y: 0 }
+  lastPointer: { x: 0, y: 0 },
+  equipmentRenderToken: 0
 };
 
 const IDLE_LINES = [
@@ -49,7 +50,21 @@ function setPetImage(filePath, fallbackLetter) {
   petFallback.hidden = true;
 }
 
-function renderEquipment(items = []) {
+async function resolveEquipmentSource(item) {
+  if (!item?.pixelImagePath) {
+    return "";
+  }
+
+  try {
+    const transparentAsset = await window.previewTools.createTransparentRewardAsset(item.pixelImagePath);
+    return transparentAsset.dataUrl;
+  } catch {
+    return window.previewTools.filePathToUrl(item.pixelImagePath);
+  }
+}
+
+async function renderEquipment(items = []) {
+  const renderToken = ++petRuntime.equipmentRenderToken;
   petEquipmentLayer.innerHTML = "";
   if (!Array.isArray(items) || !items.length) {
     petStage.dataset.hasEquipment = "false";
@@ -68,10 +83,15 @@ function renderEquipment(items = []) {
       continue;
     }
 
+    const source = await resolveEquipmentSource(item);
+    if (renderToken !== petRuntime.equipmentRenderToken) {
+      return;
+    }
+
     const image = document.createElement("img");
     image.className = `pet-equipment pet-equipment-${item.slot || "misc"}`;
     image.alt = "";
-    image.src = window.previewTools.filePathToUrl(item.pixelImagePath);
+    image.src = source;
     image.loading = "eager";
     petEquipmentLayer.append(image);
   }
