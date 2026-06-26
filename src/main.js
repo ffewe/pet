@@ -119,6 +119,10 @@ function buildPrompt(renderStyle = "pet-chibi") {
   ].join(" ");
 }
 
+function getRenderSize(renderStyle = "pet-chibi") {
+  return renderStyle === "reward-item" ? "512x512" : "768x768";
+}
+
 function extToMime(extension) {
   switch (extension.toLowerCase()) {
     case ".png":
@@ -316,7 +320,7 @@ async function requestChatCompatImage(sourceImagePath, config, prompt) {
   });
 }
 
-async function requestGenerationsImage(sourceImagePath, config, prompt) {
+async function requestGenerationsImage(sourceImagePath, config, prompt, renderStyle = "pet-chibi") {
   const imageDataUrl = await toDataUrl(sourceImagePath);
   return fetch(buildEndpointUrl(config.baseUrl, "/images/generations"), {
     method: "POST",
@@ -327,19 +331,19 @@ async function requestGenerationsImage(sourceImagePath, config, prompt) {
     body: JSON.stringify({
       model: config.model || MODEL_NAME,
       prompt: `${prompt} Use the attached image as the reference subject.`,
-      size: "1024x1024",
+      size: getRenderSize(renderStyle),
       image: imageDataUrl
     })
   });
 }
 
-async function requestEditsImage(sourceImagePath, config, prompt) {
+async function requestEditsImage(sourceImagePath, config, prompt, renderStyle = "pet-chibi") {
   const fileBuffer = await fs.readFile(sourceImagePath);
   const blob = new Blob([fileBuffer], { type: extToMime(path.extname(sourceImagePath)) });
   const formData = new FormData();
   formData.append("model", config.model || MODEL_NAME);
   formData.append("prompt", prompt);
-  formData.append("size", "1024x1024");
+  formData.append("size", getRenderSize(renderStyle));
   formData.append("image", blob, path.basename(sourceImagePath));
   return fetch(buildEndpointUrl(config.baseUrl, "/images/edits"), {
     method: "POST",
@@ -991,38 +995,42 @@ async function callImageProvider(sourceImagePath, config, renderStyle = "pet-chi
   const prompt = buildPrompt(renderStyle);
   const providerMode = normalizeProviderMode(config.providerMode);
   const endpointMode = normalizeEndpointMode(config.endpointMode);
-  try {
-    if (providerMode === "remote-chat-compat") {
+  const requestSteps =
+    providerMode === "remote-chat-compat"
+      ? [
+          () => requestChatCompatImage(sourceImagePath, config, prompt),
+          () => requestEditsImage(sourceImagePath, config, prompt, renderStyle),
+          () => requestGenerationsImage(sourceImagePath, config, prompt, renderStyle)
+        ]
+      : endpointMode === "generations"
+        ? [
+            () => requestGenerationsImage(sourceImagePath, config, prompt, renderStyle),
+            () => requestEditsImage(sourceImagePath, config, prompt, renderStyle),
+            () => requestChatCompatImage(sourceImagePath, config, prompt)
+          ]
+        : [
+            () => requestEditsImage(sourceImagePath, config, prompt, renderStyle),
+            () => requestGenerationsImage(sourceImagePath, config, prompt, renderStyle),
+            () => requestChatCompatImage(sourceImagePath, config, prompt)
+          ];
+
+  let lastError = null;
+  for (let index = 0; index < requestSteps.length; index += 1) {
+    try {
       return await parseImageProviderResponse(
-        await requestChatCompatImage(sourceImagePath, config, prompt),
+        await requestSteps[index](),
         config.openAIApiKey
       );
+    } catch (error) {
+      lastError = error;
+      const shouldRetry = index < requestSteps.length - 1 && isTimeoutLikeImageError(error);
+      if (!shouldRetry) {
+        throw error;
+      }
     }
-
-    if (endpointMode === "generations") {
-      return await parseImageProviderResponse(
-        await requestGenerationsImage(sourceImagePath, config, prompt),
-        config.openAIApiKey
-      );
-    }
-
-    return await parseImageProviderResponse(
-      await requestEditsImage(sourceImagePath, config, prompt),
-      config.openAIApiKey
-    );
-  } catch (error) {
-    const canFallbackToEdits =
-      providerMode === "remote-chat-compat" && isTimeoutLikeImageError(error);
-
-    if (canFallbackToEdits) {
-      return parseImageProviderResponse(
-        await requestEditsImage(sourceImagePath, config, prompt),
-        config.openAIApiKey
-      );
-    }
-
-    throw error;
   }
+
+  throw lastError || new Error("Image generation failed.");
 }
 
 function getSenderWindow(event) {
