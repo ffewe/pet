@@ -115,7 +115,8 @@ function buildPrompt(renderStyle = "pet-chibi") {
     "Transform the uploaded character image into cute cartoon pixel art.",
     "Keep the main subject recognizable and preserve distinctive colors and silhouette.",
     "Use a clean, charming, game-ready pixel art look suitable for a desktop pet.",
-    "Keep the composition focused on a single subject and avoid adding extra characters or complex backgrounds."
+    "Keep the composition focused on a single subject and avoid adding extra characters or complex backgrounds.",
+    "Use a transparent background or a very plain clean background, and avoid scenes, frames, decorative props, or visible room details."
   ].join(" ");
 }
 
@@ -1357,6 +1358,10 @@ ipcMain.handle("image:export-preview", async (event, payload) => {
 ipcMain.handle("pet:confirm-preview", async (_event, payload) => {
   if (!payload?.previewPath) {
     throw new Error("No preview selected.");
+  }
+  const extension = path.extname(payload.previewPath).toLowerCase();
+  if (![".png", ".webp"].includes(extension)) {
+    throw new Error("Pet assets must be transparent PNG or WebP resources.");
   }
   return mutateState((state) => {
     updatePetProfile(state, {
